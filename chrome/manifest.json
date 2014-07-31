@@ -19,6 +19,9 @@
     ]
   },
 
+  "page_action": {
+  },
+
   "minimum_chrome_version": "36.0",
   "offline_enabled" : false,
   "permissions": [
