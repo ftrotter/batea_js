@@ -2,16 +2,15 @@
  *
  * This file is part of DocGraph Spade Chrome extension
  *
- * Copyright 2014, The DocGraph Journal.
+ * @copyright 2014, The DocGraph Journal.
  * All rights reserved.
  * http://spade.docgraph.org
  *
- * The Initial Developer of the Original Code is
- *  Andrey Ivanov <andrey.v.ivanov@gmail.com>.
+ * @author Andrey Ivanov <andrey.v.ivanov@gmail.com>
  *
  */
 
-// This is common place for project constants
+/** @fileOverview This is a common place for main project constants */
 
 WEBSERVICE_SERVER="http://spade.ft1.us/";
 

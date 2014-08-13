@@ -10,20 +10,42 @@
  *
  */
 
+/** @fileOverview Main classes for backgroun process of the extension. */
+
 /** 
-* A helper class to speed up visit traverse. It caches all url and visit items
+* A helper class to speed up visit traverse. 
+* Instance caches all history and visit items
+*
 * @constructor
+* @this {HistoryCache}
 */
 function HistoryCache() {
+	/**
+	* Mapping of id to {HistoryItem}
+	* @private
+	* @member array
+	*/ 
 	this._histories = [];
+	/** 
+	* Mapping of id to {VisitItem}
+	* @private
+	* @member array
+	*/ 
 	this._visits = [];
 
 	/**
-	* _sessions object maps of visitId to session visitId
-	* @member Object
+	* Mapping of session id to its state (bool)
+	* @private
+	* @member array
 	*/
 	this._sessions = [];
 
+	/**
+	 * Fill cache entries from Chrome. Becuase of asynchronis nature of 
+	 * Chrome API a callback function is used to notify about completion
+	 *
+	 * @param {function} callback function to execute on completion.
+	 */
 	this.refresh = function(callback) {
 		var histories = [];
 		var allVisits = [];
@@ -44,7 +66,6 @@ function HistoryCache() {
                     	cache._histories = histories;
                     	cache._visits = allVisits;
                     	if (callback) callback(cache);
-                        //console.log(visits.length + ' visits');
                     }
 				});
 			}
@@ -52,8 +73,10 @@ function HistoryCache() {
 	};
 
 	/**
-	* get session for passed visit id
-	* @return id of topmost visit or 0 if passed visit id is invalid
+	* get session for passed visit
+	*
+	* @param {VisitItem} visit to find session for.
+	* @return {number} id of topmost visit or 0 if passed visit id is invalid
 	*/
 	this.getSession = function(visit) {
 		var id = visit.referringVisitId > 0 ? visit.referringVisitId : visit.visitId;
@@ -72,22 +95,49 @@ function HistoryCache() {
 		return session;
 	};
 
+	/**
+	* get HistoryItem for passed visit
+	*
+	* @param {VisitItem} visit to find associated history item.
+	* @return {HistoryItem} found item or undefined
+	*/
 	this.getHistory = function(visit) {
 		return this._histories[visit.id];
 	};
 
+	/**
+	* get VisitItem for passed visit id
+	*
+	* @param {id} id to find associated visit item.
+	* @return {VisitItem} found item or undefined
+	*/
 	this.getVisitById = function(id) {
 		return this._visits[id];
 	};
 
+	/**
+	* get maximum available visit id
+	*
+	* @return {number}
+	*/
 	this.getVisitCount = function() {
 		return this._visits.length;
 	};
 
+	/**
+	* add new {HistoryItem} entry to the cache
+	*
+	* @param {HistoryItem} history item to add
+	*/
 	this.addHistory = function(history) {
 		this._histories[history.id] = history;
 	};
 
+	/**
+	* add new {visitItem} entry to the cache
+	*
+	* @param {visitItem} history item to add
+	*/
 	this.addVisit = function(visit) {
 		this._visits[visit.visitId] = visit;
 	};
@@ -95,14 +145,21 @@ function HistoryCache() {
 }
 
 /**
-* Helper function to obtain the host from the url
+* Helper function to obtain the hostname only from passed url
+*
+* @param {string} url Full url to process
+* @return {string}
 */
 function getHost(url) {
 	return $('<a>').prop('href', url).prop('hostname');
 }
 
 /**
-* Helper funciton to safely handle undefined value
+* Helper function to safely handle undefined value during JSON.parse
+*
+* @param {string} value to parse
+* @param {object} defaultValue to return if value is undefined
+* @return {object}
 */
 function safeParseJSON(value, defaultValue) {
 	if (value == undefined) {
@@ -112,61 +169,93 @@ function safeParseJSON(value, defaultValue) {
 }
 
 /** 
-* A helper class to speed up visit traverse. It caches all url and visit items
+* This class combines extension logic into single instance
+*
 * @constructor
+* @this {VisitProcessor}
 */
 function VisitProcessor() {
 	/**
 	* load unique extension id from localStorage
-	* @member integer
+	* @member string
 	*/
-	this._extensionId = localStorage.id;
-	if (this._extensionId == undefined) {
+	this.Id = localStorage.id;
+	// Check if we need new id
+	if (this.Id == undefined) {
 		// generate and save unique id if it was not created yet
-		this._extensionId = this.generateId();
-		localStorage.id = this._extensionId;
+		this.setId(this.generateId());
 	}
+	
+	/**
+	* Cache of is_clinical.php call results to avoid extra network activity
+	* @private
+	* @member object
+	*/ 
+	
 	this._clinicalUrlChecks = {};
+	/**
+	* Store pair {tabid, url} for recently updated tabs
+	* @private
+	* @member array
+	*/ 
 	this._recentTabs = [];
+
+	/**
+	* Map between tabId and {VisitItem} currently visible tabs
+	* @private
+	* @member array
+	*/ 
 	this._tab2Visit = [];
+
 	/**
 	* this variable stores donation state for a sessions
+	* @private
 	* @member Array
 	*/
 	this._sessions = [];
-	/**
-	* this variable maps visit id to session id
-	* @member Array
-	*/
-	this._visitSessions = [];
 
 	/**
 	* this variable stores mapping between tabId and visit. 
 	* It is filled from _tab2Visit when tab has been updated
+	* @private
 	* @member Array
 	*/
 	this._lastTab2Visit = [];
 
 	/**
-	* List of donated sessions
+	* List of already donated sessions
+	* @private
+	* @member Array
 	*/
 	this._donatedSessions = safeParseJSON(localStorage.donatedSessions, []);
-	console.log(this._donatedSessions);
+
 	/**
-	* List of sessions excluded by user
+	* List of sessions already excluded by user
+	* @private
+	* @member Array
 	*/
 	this._excludedSessions = safeParseJSON(localStorage.excludedSessions, []);
-	console.log(this._excludedSessions);
 
+	/**
+	* Common cache object to lookup history items quickly
+	* @private
+	* @member {HistoryCache}
+	*/
 	this._cache = new HistoryCache();
+
+	// No we need to fill cache first time, only after this we can handle new requests
 	var processor = this;
 	this._cache.refresh(function() {
 		processor._attachListeners();
 	});
 }
 
+/**
+* Handler function for chrome.history.OnVisited Chrome API event
+*
+* @param {HistoryItem} historyItem of recent visit
+*/
 VisitProcessor.prototype.__onVisited = function(historyItem) {
-	//console.log(historyItem);
 	var url = historyItem.url;
 	var lastVisitTime = historyItem.lastVisitTime;
 	var processor = this;
@@ -179,10 +268,12 @@ VisitProcessor.prototype.__onVisited = function(historyItem) {
 		if (tabId >= 0) {
 			if (this._tab2Visit[tabId] != null) {
 				console.log("Bad tab2visit entry");
+				console.log(this._tab2Visit[tabId]);
 			}
 			this.processVisit(tabId, url, visit);
 		} else {
 			console.log("visit is not associated with a tab!");
+			console.log(historyItem);
 			// TODO: check if visit is belong to any active session still.
 			// TODO: verify if this is clinical url
 		}
@@ -190,10 +281,12 @@ VisitProcessor.prototype.__onVisited = function(historyItem) {
 
 }
 
+/**
+* Handler function for chrome.tabs.OnUpdated Chrome API event
+*
+* @param {Tab} tab updated tab information
+*/
 VisitProcessor.prototype.__onUpdated = function(tab) {
-   	//console.log(tab.url);
-   	//console.log(tab);
-   	// TODO: handle tab close to identify session completion
 	this._recentTabs.push({ tabId: tab.id, url: tab.url });
 
 	var lastVisit = this._tab2Visit[tab.id];
@@ -203,27 +296,49 @@ VisitProcessor.prototype.__onUpdated = function(tab) {
 	this._saveLastTabVisit(tab.id);
 }
 
+/**
+* Handler function for chrome.tabs.OnRemoved Chrome API event
+*
+* @param {number} tabId closed tab id
+*/
 VisitProcessor.prototype.__onRemoved = function(tabId) {
 	// prepare reference for _checkForCompletedSession
 	this._saveLastTabVisit(tabId);
-	var processor = this;
-	processor._checkForCompletedSession(tabId, -1);
+	this._checkForCompletedSession(tabId, -1);
 }
 
+/**
+* Handler function for chrome.pageAction.onClicked Chrome API event
+*
+* @param {Tab} tab object associated with page action
+*/
 VisitProcessor.prototype.__onIconClicked = function(tab) {
 	var visit = this._tab2Visit[tab.id];
+	// First check if we have visit associated with the tab
 	if (visit != null) {
+	    // get current session state
 		var session = this._cache.getSession(visit);
 		var state = this._sessions[session];
+		// inverse the session state
 		if (state === undefined) {
 			state = true;
 		} else {
 			state = !state;
 		}
+		// and update icons for every session's tab
 		this._setSessionState(session, state);
 	}
 }
 
+/**
+* find recent tab by url. This function may be called only once because
+* this is intended to avoid possible incorrect associations by further 
+* navigations
+*
+* @private
+* @param {string} url to find
+* @return {number} found id of tab or -1
+*/
 VisitProcessor.prototype._findRecentTab = function(url) {
 	for (var i = this._recentTabs.length - 1; i >= 0; --i) {
 		var tabInfo = this._recentTabs[i];
@@ -239,17 +354,22 @@ VisitProcessor.prototype._findRecentTab = function(url) {
 
 /**
 * associate visit with passed tab
+*
+* @private
+* @param {number} tabID to associate
+* @param {VisitItem} visit to associate
 */
 VisitProcessor.prototype._setTabVisit = function(tabId, visit) {
-	// we need to handle new visit in few steps
-	// A) associate visit with found tab
 	this._tab2Visit[tabId] = visit;
-	//console.log("associate VisitItem with tab #" + tabId);
 }
 
 /**
-* Looking for VisitItem with provided visitTime
-* @param foundCallback will be called if VisitItem found. Found value will be passed to callback
+* Looking for a VisitItem with provided url and visitTime. Note: this check is asynchronious
+*
+* @private
+* @param {string} url of the visit
+* @param {number} visitTime the visit
+* @param {function} foundCallback to be called if VisitItem found. Found {VisitItem} will be passed to callback
 */
 VisitProcessor.prototype._findVisit = function(url, visitTime, foundCallback) {
 	var processor = this;
@@ -264,13 +384,19 @@ VisitProcessor.prototype._findVisit = function(url, visitTime, foundCallback) {
 	});
 }
 
+/**
+* Checking entire Chrome history for new clinical url and post them
+* Function takes into account previously processed items and do not 
+* post them second time
+*/
 VisitProcessor.prototype.findNewVisits = function() {
+	// Get last processed visit index from localStorage
 	var lastProcessedVisit = localStorage.lastProcessedVisit;
 	if (lastProcessedVisit === undefined) {
 		lastProcessedVisit = 0;
 	}
 	var processor = this;
-	// Get last processed visit index from localStorage
+	// Get most recent visit index
 	var visitCount = this._cache.getVisitCount();
 	for (var i = lastProcessedVisit; i <= visitCount; ++i) {
 		var visit = this._cache.getVisitById(i);
@@ -294,6 +420,14 @@ VisitProcessor.prototype.findNewVisits = function() {
 	localStorage.lastProcessedVisit = visitCount;
 }
 
+/**
+* Checking if passed url is clinical. Note: this check is asynchronious
+*
+* @private
+* @param {string} url to check
+* @param {number} session id  associated with the url
+* @param {function} callback to be called if url is clinical. session vlaue is passed as parameter to callback
+*/
 VisitProcessor.prototype.checkForClinicalUrl = function(url, session, callback) {
 	var host = getHost(url);
 	var processor = this;
@@ -323,7 +457,12 @@ VisitProcessor.prototype.checkForClinicalUrl = function(url, session, callback) 
 }
 
 /**
-* process new user visit. This is main logic method
+* Process new user visit. This is main logic method
+*
+* @private
+* @param {number} tabId of the visit associated tab
+* @param {string} url of the visit
+* @param {VisitItem} visit details of the visit
 */
 VisitProcessor.prototype.processVisit = function(tabId, url, visit) {
 	// we need to handle new visit in few steps
@@ -333,11 +472,9 @@ VisitProcessor.prototype.processVisit = function(tabId, url, visit) {
 	// check visit's session state
 	var session = this._cache.getSession(visit);
 	console.log("Session #" + session + " -> " + url);
-	//console.log(visit);
 	if (session > 0) {
 		var state = this._sessions[session];
 		// set page icon based on session state
-		//console.log("session state is " + state);
 		this._setTabState(tabId, state);
 		if (state === undefined) {
 			// visit's session state is no defined yet
@@ -354,14 +491,14 @@ VisitProcessor.prototype.processVisit = function(tabId, url, visit) {
 }
 
 /**
-* check for if session copleted for passed tabId
+* check if session completed for passed tabId
+*
+* @param {number} tabId to check for completed session
+* @param {number} session currently associated with tabId
 */
 VisitProcessor.prototype._checkForCompletedSession = function(tabId, session) {
-	//console.log("check for completed sessions. tab #" + tabId);
-	// Check if recent tab visit's session completed 
-	// with last redirect
+	// Check if recent tab visit's session completed with lastrecent navigations
 	var associations = this._lastTab2Visit;
-	//console.log(associations);
 	for (var i = associations.length - 1; i>= 0; --i) {
 		var association = associations[i];
 		if (association.tabId == tabId) {
@@ -380,6 +517,12 @@ VisitProcessor.prototype._checkForCompletedSession = function(tabId, session) {
 	}
 }
 
+
+/**
+* Common method to save association information about for passed tabId
+*
+* @param {number} tabId to save data
+*/
 VisitProcessor.prototype._saveLastTabVisit = function(tabId) {
 	// record last tab visit to find completed session
 	var visit = this._tab2Visit[tabId];
@@ -391,12 +534,15 @@ VisitProcessor.prototype._saveLastTabVisit = function(tabId) {
 }
 
 /**
-* process completed session, check its state first
+* Process completed session
+*
+* @param {number} session to process
 */
 VisitProcessor.prototype.processCompletedSession = function(session) {
+	// Get session state first
 	var state = processor._sessions[session];
 	if (state === undefined) {
-		console.log("Ignored completed session #" + session);
+		console.log("Ignore completed session #" + session);
 		return;
 	}
 	if (!session) {
@@ -407,11 +553,14 @@ VisitProcessor.prototype.processCompletedSession = function(session) {
 		return;
 	}
 
+	// This is donatable session
 	this.donateSession(session);
 }
 
 /**
-* donate session, post it to webserver save state to DB
+* Donate session
+*
+* @param {number} session to process
 */
 VisitProcessor.prototype.donateSession = function(session) {
 	console.log("Donating completed session #" + session);
@@ -448,26 +597,36 @@ VisitProcessor.prototype.donateSession = function(session) {
 	this.postSession(urls, visits);
 }
 
+/**
+* Post session url tree to the webserver
+*
+* @param {array} urls of the session to post
+* @param {array} visits of the session to post
+*/
 VisitProcessor.prototype.postSession = function(urls, visits) {
 	var data = {
-		user_token: this._extensionId,
-		url_tree: {
-			chrome_urls: urls,
-			chrome_visits: visits
-		}
+		"user_token": this.Id,
+		"url_tree": JSON.stringify({ chrome_urls: urls, chrome_visits: visits })
 	};
 
-	console.log(JSON.stringify(data));
 	var webserviceUrl = WEBSERVICE_SERVER + "save_tree.php";
-	$.ajax(webserviceUrl, { dataType:"json", type: "POST", data: data, success: function(result) {
-		console.log(result);
+	$.ajax(webserviceUrl, { dataType:"json",
+						    type: "POST",
+						    contentType: 'application/json; charset=utf-8',
+						    data: data, success: function(result) {
 	}});
 
 }
 
+/**
+* Convert Chrome internal {HistoryItem} object into 
+* url JSON object compatible with the server
+*
+* @param {HistoryItem} item to convert
+* @param {object} url object ready to post to webserver
+*/
 VisitProcessor.prototype.convertHistoryItem = function(item) {
-	// convert Chrome internal object into 
-	// url JSON object compatible with the server
+	// convert only avaialble fields
 	return {
 		url_id: item.id,
 		url: item.url,
@@ -478,9 +637,15 @@ VisitProcessor.prototype.convertHistoryItem = function(item) {
 	};
 }
 
+/**
+* Convert Chrome internal {VisitItem} object into 
+* visit JSON object compatible with the server
+*
+* @param {VisitItem} item to convert
+* @param {object} url object ready to post to webserver
+*/
 VisitProcessor.prototype.convertVisitItem = function(item) {
-	// convert Chrome internal object into 
-	// visit JSON object compatible with the server
+	// convert only avaialble fields
 	return {
 		visit_id: item.visitId,
 		url_id: item.id,
@@ -490,6 +655,12 @@ VisitProcessor.prototype.convertVisitItem = function(item) {
 	};
 }
 
+/**
+* Helper function to get page action icon image based on passed session state
+*
+* @param {bool} state of the session
+* @return {string} path to icon image
+*/
 VisitProcessor.prototype._getStateIcon = function(state) {
 	if (state) {
 		return "img/icon-on.png";
@@ -501,7 +672,10 @@ VisitProcessor.prototype._getStateIcon = function(state) {
 }
 
 /**
-* update passed tab icon state based on donatable state
+* Update passed tab icon state based on donatable state
+*
+* @param {number} tabId to process
+* @param {bool} state of the session to show
 */
 VisitProcessor.prototype._setTabState = function(tabId, state) {
 	chrome.pageAction.setIcon({ tabId: tabId, path: this._getStateIcon(state) });
@@ -509,7 +683,10 @@ VisitProcessor.prototype._setTabState = function(tabId, state) {
 }
 
 /**
-* set donatable state for session and update associated session tabs
+* Set donatable state for session and update associated session tabs
+*
+* @param {number} session to process
+* @param {bool} state of the session to show
 */
 VisitProcessor.prototype._setSessionState = function(session, state) {
 	this._sessions[session] = state;
@@ -522,7 +699,10 @@ VisitProcessor.prototype._setSessionState = function(session, state) {
 }
 
 /**
-* check if any associated tabs exist for passed session
+* Check if any associated tab exists for passed session
+*
+* @param {number} session to process
+* @return {bool} true if session is active still
 */
 VisitProcessor.prototype._isSessionActive = function(session) {
 	for (var i = 0; i < this._tab2Visit.length; ++i) {
@@ -537,7 +717,9 @@ VisitProcessor.prototype._isSessionActive = function(session) {
 }
 
 /**
-* generate unique id for extnesion. It will be used as user token for webserver posts
+* Generate unique id for extnesion. It will be used as user token for webserver posts
+*
+* @return {string} new unique token value
 */
 VisitProcessor.prototype.generateId = function() {
 	var d = new Date();
@@ -546,7 +728,18 @@ VisitProcessor.prototype.generateId = function() {
 }
 
 /**
-* helper function to attach necessary event listeners
+* Assign and save id as user token
+*
+* @param {string} id new token value to save
+*/
+VisitProcessor.prototype.setId = function(id) {
+	this.Id = id;
+	localStorage.id = this.Id;
+}
+
+/**
+* Helper function to attach all necessary event listeners
+* and start user interactions processing
 */
 VisitProcessor.prototype._attachListeners = function() {
 	var processor = this;
@@ -569,6 +762,7 @@ VisitProcessor.prototype._attachListeners = function() {
 		processor.__onIconClicked(tab);
 	});
 
+	// now time to find new clinical session in the Chrome history 
 	processor.findNewVisits();
 }
 

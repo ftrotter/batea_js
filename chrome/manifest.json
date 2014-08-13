@@ -19,6 +19,8 @@
     ]
   },
 
+  "options_page": "options.html",
+
   "page_action": {
   },
 
