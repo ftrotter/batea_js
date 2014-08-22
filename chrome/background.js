@@ -605,14 +605,13 @@ VisitProcessor.prototype.donateSession = function(session) {
 */
 VisitProcessor.prototype.postSession = function(urls, visits) {
 	var data = {
-		"user_token": this.Id,
-		"url_tree": JSON.stringify({ chrome_urls: urls, chrome_visits: visits })
+		"url_tree": JSON.stringify({ chrome_urls: urls, chrome_visits: visits }),
+		"user_token": this.Id
 	};
 
 	var webserviceUrl = WEBSERVICE_SERVER + "save_tree.php";
 	$.ajax(webserviceUrl, { dataType:"json",
 						    type: "POST",
-						    contentType: 'application/json; charset=utf-8',
 						    data: data, success: function(result) {
 	}});
 
