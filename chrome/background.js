@@ -201,7 +201,7 @@ function VisitProcessor() {
 	this._recentTabs = [];
 
 	/**
-	* Map between tabId and {VisitItem} currently visible tabs
+	* Map between tabId and {VisitItem} of currently visible tabs
 	* @private
 	* @member array
 	*/ 
@@ -264,13 +264,19 @@ VisitProcessor.prototype.__onVisited = function(historyItem) {
 	this._cache.addHistory(historyItem);
 	this._findVisit(url, lastVisitTime, function(visit) {
 		this._cache.addVisit(visit);
+
 		var tabId = this._findRecentTab(url);
 		if (tabId >= 0) {
 			if (this._tab2Visit[tabId] != null) {
 				console.log("Bad tab2visit entry");
 				console.log(this._tab2Visit[tabId]);
 			}
-			this.processVisit(tabId, url, visit);
+
+			// We need to rebuild hierarchy if Chrome does not provide parent
+			this.rebuildHierarchy(tabId, visit, function(visit) {
+				this.processVisit(tabId, url, visit);
+			});
+
 		} else {
 			console.log("visit is not associated with a tab!");
 			console.log(historyItem);
@@ -531,6 +537,48 @@ VisitProcessor.prototype._saveLastTabVisit = function(tabId) {
 		// now mark the associatation as invalid
 		this._tab2Visit[tabId] = null;
 	}
+}
+
+/**
+* Special function to determine parent visit if Chrome hides it
+*
+* @param {number} tabId of the visit
+* @param {VisitItem} visit to processs
+* @param {callback} callback for visit to processs
+*/
+VisitProcessor.prototype.rebuildHierarchy = function(tabId, visit, callback) {
+	var processor = this;
+	if (visit.referringVisitId != 0 || visit.transition != "link") {
+		callback.call(processor, visit);
+		return;
+	}
+	
+	var associations = this._lastTab2Visit;
+	for (var i = associations.length - 1; i>= 0; --i) {
+		var association = associations[i];
+		if (association.tabId == tabId) {
+			console.log("Associate recent visit of the tab as parent");
+			visit.referringVisitId = association.visit.visitId;
+			callback.call(processor, visit);
+			return;
+		}
+	}
+
+	// Looking for active tab in the same window and associate it as parent
+	chrome.tabs.get(tabId, function(tab) {
+		chrome.tabs.query({active: true, windowId: tab.windowId}, function(tabs) {
+			console.log(tabs);
+			if (tabs.length == 1) {
+				var parentVisit = processor._tab2Visit[tabs[0].id];
+				if (parentVisit != null && parentVisit !== undefined) {
+					console.log("Associate active tab visit as parent for newly opened tab");
+					visit.referringVisitId = parentVisit.visitId;
+				}
+			}
+			callback.call(processor, visit);
+			return;
+		});
+	});
 }
 
 /**
