@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "__MSG_extensionName__",
   "version": "0.1",
   "description": "__MSG_extensionDescription__",
@@ -29,6 +29,7 @@
   "permissions": [
     "tabs",
     "history",
-    "http://spade.ft1.us/*"
+    "http://spade.ft1.us/*",
+    "https://spade.docgraph.org/*"
   ]
 }
