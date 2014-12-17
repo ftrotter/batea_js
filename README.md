@@ -1,10 +1,10 @@
-spade
+batea_js
 ============
 
-Initial DocGraph Spade extension implementation. "chrome" folder contains chrome extension source code.
+Initial DocGraph Batea browser extension implementation. "chrome" folder contains chrome extension source code.
 
 
-Chrome extension processes user vistis to find session wiht clinical urls in two ways:
+Chrome extension processes user vistis to find session with clinical urls in two ways:
 
 1.	It processes entire visits history (VisitProcessor.findNewVisits() function). To speed up processing 
 	extension checks only newly added items since last check. It also igrnoes sessions that are already 
