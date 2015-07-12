@@ -1,7 +1,7 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 4,
   "name": "__MSG_extensionName__",
-  "version": "0.1",
+  "version": "0.2",
   "description": "__MSG_extensionDescription__",
   "icons": { "16": "img/icon-16.png",
              "48": "img/icon-48.png",
@@ -9,7 +9,7 @@
 
   "default_locale": "en",
 
-  "homepage_url": "http://spade.docgraph.org",
+  "homepage_url": "http://batea.docgraph.org",
 
   "background": {
     "scripts": [
@@ -29,7 +29,6 @@
   "permissions": [
     "tabs",
     "history",
-    "http://spade.ft1.us/*",
-    "https://spade.docgraph.org/*"
+    "https://batea.docgraph.org/*"
   ]
 }
