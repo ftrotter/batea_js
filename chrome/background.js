@@ -1,11 +1,12 @@
 /** @license
  *
- * This file is part of DocGraph Spade Chrome extension
+ * This file is part of DocGraph Batea Chrome extension
  *
- * @copyright 2014, The DocGraph Journal.
+ * @copyright 2014-2015, The DocGraph Journal.
  * All rights reserved.
- * http://spade.docgraph.org
+ * http://batea.docgraph.org
  *
+ * @author Fred Trotter <fred.trotter@gmail.com>
  * @author Andrey Ivanov <andrey.v.ivanov@gmail.com>
  *
  */
