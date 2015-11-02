@@ -1,7 +1,7 @@
 {
-  "manifest_version": 4,
+  "manifest_version": 2,
   "name": "__MSG_extensionName__",
-  "version": "0.2",
+  "version": "0.3",
   "description": "__MSG_extensionDescription__",
   "icons": { "16": "img/icon-16.png",
              "48": "img/icon-48.png",
@@ -22,6 +22,7 @@
   "options_page": "options.html",
 
   "page_action": {
+    "default_popup": "forager.html"
   },
 
   "minimum_chrome_version": "36.0",
@@ -29,6 +30,33 @@
   "permissions": [
     "tabs",
     "history",
-    "https://batea.docgraph.org/*"
+    "http://*/*",
+    "https://*/*",
+    "http://*.wikipedia.org/*",
+    "https://*.wikipedia.org/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches":
+      [
+        "http://*.wikipedia.org/*",
+        "https://*.wikipedia.org/*"
+      ],
+      "js":
+      [
+        "lib/jquery-2.1.1.js",
+        "const.js",
+        "wikipedia.js"
+      ]
+    }
+  ],
+
+  "web_accessible_resources": [
+    "css/*",
+    "comment.html",
+    "comment.js",
+    "forager.html",
+    "forager.js"
   ]
 }
