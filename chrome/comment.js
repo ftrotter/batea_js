@@ -46,7 +46,6 @@ $(document).ready(function() {
         chrome.runtime.sendMessage({ message : "hidePopup"});
     });
 
-    // assign handler to Save button
     $("#buttonSave").bind("click", function() {
         initData.message = "postComment";
         initData.comment = $("#comment").val();

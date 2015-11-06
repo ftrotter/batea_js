@@ -11,7 +11,7 @@
  *
  */
 
-/** @fileOverview Logic for forager form */
+/** @fileOverview Logic for forager popup */
 
 var closeWindow = false;
 
@@ -20,16 +20,13 @@ $(document).ready(function() {
         closeWindow = response.closeWindow;
         $("#wikiCaption").text(response.title);
         if (response.donationState == undefined) {
-            $("#labelDonate").text("Browser data is not being donated");
-            $("#donate").prop('checked', false);
             $("#donate").prop("disabled", true);
-        } else if (response.donationState) {
-            $("#labelDonate").text("Currently donating browser data");
-            $("#donate").prop('checked', true);
-        } else {
-            $("#labelDonate").text("Cancelled donating browser data");
-            $("#donate").prop('checked', false);
         }
+        $("#donate").prop('checked', !!response.donationState);
+        $("#labelDonateNone").toggle(response.donationState == undefined);
+        $("#labelDonateOn").toggle(response.donationState);
+        $("#labelDonateOff").toggle(response.donationState == false);
+        //$("#donate").bootstrapSwitch();
     });
     
     $("#buttonClose").bind("click", function() {
@@ -48,7 +45,9 @@ $(document).ready(function() {
     });
 
     $("#donate").on("change", function() {
-        chrome.runtime.sendMessage({ message : "toggleDonation", state: $(this).prop('checked') });
+        var state = $(this).prop('checked');
+        updateDonateLabel(state);
+        chrome.runtime.sendMessage({ message : "toggleDonation", state: state });
     });
 });
 

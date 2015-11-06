@@ -14,12 +14,11 @@
 /** @fileOverview Logic for options page */
 
 $(document).ready(function() {
-    // Just fills token id value into text field
     var processor = chrome.extension.getBackgroundPage().processor;
 
-    $("#av_section_scholar").toggle(processor._consented);
+    $(".av_section_scholar").toggle(processor._consented);
     $("#av_section_scholar form").attr('action', ANONYMOUS_URI);
-    $("#av_section_anonymous").toggle(!processor._consented);
+    $(".av_section_anonymous").toggle(!processor._consented);
     $("#av_section_anonymous form").attr('action', CONSENT_URI);
 
     $("#recordAnyWiki").prop('checked', !processor.checkClinicalOnlyWiki());
@@ -44,10 +43,14 @@ $(document).ready(function() {
         }
     })
 
-    // assign handler to Save button
-    $("#buttonSave").bind("click", function() {
+    $("#buttonAnonymous").bind("click", function() {
         window.close();
     });
 
+    $("#buttonScholar").bind("click", function() {
+        window.close();
+    });
+
+    // Just fills token id value into debug text field
     $("#userId").val(processor.Id);
 });

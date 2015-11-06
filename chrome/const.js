@@ -29,7 +29,6 @@ DAILY_FORM_DISMISS_LIMIT = 2;
 TOTAL_FORM_DISMISS_LIMIT = 30;
 FORM_DISMISS_SILENT_INTERVAL_SEC = 86400;
 
-
 FORAGER_INTERVAL_SEC = 120;
 
 // wating 3 seconds after selection before showing the comment popup

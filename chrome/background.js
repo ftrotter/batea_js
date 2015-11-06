@@ -281,13 +281,16 @@ function VisitProcessor() {
 */
 VisitProcessor.prototype.__onMessage = function(message, sender, sendResponse) {
     if (message.message == "popupWikiComment") {
+        console.log(message);
         this.commentInitData = {
             uri : sender.tab.uri,
             title : message.title,
             selection : message.selection,
             config : message.config,
         };
+        console.log(this.isPopupAllowed());
         if (this.isPopupAllowed()) {
+        console.log("comment.html");
             this.showPopup(sender.tab.id, "comment.html");
         }
     } else if (message.message == "initCommentPopup") {
@@ -1088,7 +1091,6 @@ VisitProcessor.prototype.setAllowPopup = function(allow) {
         localStorage.dismisses = 0;
         this._dismisses = 0;
         this._sessionDismisses = 0;
-        return;
     }
 
     clearTimeout(localStorage.dismissesExpire);
@@ -1104,7 +1106,7 @@ VisitProcessor.prototype.isPopupAllowed = function() {
 
 VisitProcessor.prototype.showPopup = function(tabid, page) {
     var floating = '<div id="bateaPopup" style="right: 10px; top: 30px; border: 0px none; position: fixed; __height: 100%; __width: 100%; z-index: 1000000000;">'
-    + '<div><iframe src="' + chrome.extension.getURL(page) + '" style="height: 500px; width: 706px; padding: 0px; margin: 0px;"></iframe></div></div>';
+    + '<div><iframe src="' + chrome.extension.getURL(page) + '" style="height: 506px; width: 506px; padding: 0px; margin: 0px;"></iframe></div></div>';
 
     var code = '$("#bateaPopup").remove();$("body").append(\'' + floating + '\');$("#bateaPopup").hide().show(400);'
 
