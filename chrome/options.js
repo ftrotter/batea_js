@@ -13,13 +13,27 @@
 
 /** @fileOverview Logic for options page */
 
+function addFormValidation(node, success) {
+    var form = node.parent();
+    form.remove(".form-control-feedback");
+    if (success) {
+        form.removeClass("has-error");
+        form.append('<span class="glyphicon glyphicon-ok form-control-feedback"></span>');
+        form.addClass('has-success has-feedback');
+    } else {
+        form.removeClass("has-success");
+        form.append('<span class="glyphicon glyphicon-remove form-control-feedback"></span>');
+        form.addClass('has-error has-feedback');
+    }
+}
+
 $(document).ready(function() {
     var processor = chrome.extension.getBackgroundPage().processor;
 
     $(".av_section_scholar").toggle(processor._consented);
     $("#av_section_scholar form").attr('action', ANONYMOUS_URI);
     $(".av_section_anonymous").toggle(!processor._consented);
-    $("#av_section_anonymous form").attr('action', CONSENT_URI);
+    $(".av_section_anonymous a").attr('href', CONSENT_URI.replace("{0}", processor.Id));
 
     $("#recordAnyWiki").prop('checked', !processor.checkClinicalOnlyWiki());
     $("#recordClinicalWiki").prop('checked', processor.checkClinicalOnlyWiki());
@@ -48,7 +62,32 @@ $(document).ready(function() {
     });
 
     $("#buttonScholar").bind("click", function() {
-        window.close();
+        var settings = {};
+        var selected = $("input[name='involved']:checked");
+        if (selected.length > 0) {
+            settings.delivering_clinical_care = selected.parent().text().trim();
+        }
+        selected = $("input[name='care']:checked");
+        if (selected.length > 0) {
+            settings.receiving_clinical_care = selected.parent().text().trim();
+        }
+        processor.saveSettings(settings);
+    });
+
+    $("#subscribe").click(function() {
+        if ($('#email')[0].checkValidity()) {
+            var data = { email: $("#email").val() };
+            $("#subscribe span").show();
+            processor.saveSettings(data, function(success) {
+                addFormValidation($("#email"), success);
+                if (success) {
+                    $("#email").prop('disabled', success);
+                    $("#subscribe").hide();
+                } else {
+                    $("#subscribe span").hide();
+                }
+            });
+        }
     });
 
     // Just fills token id value into debug text field

@@ -13,41 +13,83 @@
 
 /** @fileOverview Logic for forager popup */
 
-var closeWindow = false;
+var isPageAction = false;
+var hasWiki = false;
+
+function updateDonationState(donationState) {
+    $("#labelDonateNone").toggle(donationState == undefined);
+    $("#labelDonateOn").toggle(donationState);
+    $("#labelDonateOff").toggle(donationState == false);
+}
+
+function fixHeight() {
+    if (isPageAction) {
+        $("html").css("height", $(".container").height());
+    } else {
+        chrome.runtime.sendMessage({ 
+            message: "setPopupHeight",
+            height: $(".container").height()
+        });
+    }
+}
 
 $(document).ready(function() {
-    chrome.runtime.sendMessage({ message : "initForagerPopup"}, function(response) {
-        closeWindow = response.closeWindow;
-        $("#wikiCaption").text(response.title);
+    chrome.runtime.sendMessage({ message: "initForagerPopup"}, function(response) {
+        isPageAction = response.isPageAction;
+        hasWiki = response.hasWiki;
+        $(".wiki-caption").text(response.title);
         if (response.donationState == undefined) {
             $("#donate").prop("disabled", true);
         }
         $("#donate").prop('checked', !!response.donationState);
-        $("#labelDonateNone").toggle(response.donationState == undefined);
-        $("#labelDonateOn").toggle(response.donationState);
-        $("#labelDonateOff").toggle(response.donationState == false);
-        //$("#donate").bootstrapSwitch();
+        $(".page-action-comment-block").toggle(isPageAction);
+        $(".popup-comment-block").toggle(!isPageAction);
+        updateDonationState(response.donationState);
+        $(".comment-block").toggle(response.donationState && hasWiki);
+        var options = {
+            onColor: 'success',
+            offColor: 'danger',
+            animate: true,
+            onSwitchChange: function(event, state) {
+                updateDonationState(state);
+                $(".comment-block").slideToggle({
+                    progress: function() {
+                        fixHeight();
+                    }
+                });
+                chrome.runtime.sendMessage({ message: "toggleDonation", state: state });
+            }
+        };
+        $("#donate").bootstrapSwitch(options);
+        fixHeight();
     });
     
     $("#buttonClose").bind("click", function() {
-        chrome.runtime.sendMessage({ message : "hidePopup"});
-        if (closeWindow) {
+        chrome.runtime.sendMessage({ message: "hidePopup"});
+        if (isPageAction) {
             window.close();
         }
     });
 
-    // assign handler to Save button
     $("#buttonSave").bind("click", function() {
-        var data = {};
-        data.message = "postForager";
-        data.comment = $("#comment").val();
-        chrome.runtime.sendMessage(data);
-    });
-
-    $("#donate").on("change", function() {
-        var state = $(this).prop('checked');
-        updateDonateLabel(state);
-        chrome.runtime.sendMessage({ message : "toggleDonation", state: state });
+        var comment = $("#comment").val();
+        if (comment.length > 20) {
+            var data = {};
+            data.message = "postForager";
+            data.comment = comment;
+            chrome.runtime.sendMessage(data);
+            $(".comment-block").toggle(false);
+            $(".submit-block").toggle(true);
+            fixHeight();
+            if (isPageAction) {
+                $("html").fadeOut(POPUP_SEND_HIDE_DELAY_MS, function() {
+                    window.close();
+                });
+            }
+        } else {
+            $(".comment-block .alert").show();
+            fixHeight();
+        }
     });
 });
 

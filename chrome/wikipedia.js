@@ -41,10 +41,10 @@ $(document).on('selectionchange', function(e) {
             var config = getMwConfig();
             var title = getTitle();
             chrome.runtime.sendMessage({
-                message : "popupWikiComment",
-                selection : selection,
-                title : title,
-                config : config
+                message: "popupWikiComment",
+                selection: selection,
+                title: title,
+                config: config
             });
         } else {
             console.log("empty selection");
@@ -56,8 +56,8 @@ $(document).ready(function() {
     var config = getMwConfig();
     var title = getTitle();
     chrome.runtime.sendMessage({
-        message : "setWikiContent",
-        title : title,
-        config : config
+        message: "setWikiContent",
+        title: title,
+        config: config
     });
 });

@@ -14,6 +14,7 @@
 /** @fileOverview Logic for comment page */
 
 var initData = {};
+var expanded = false;
 
 function getShortText(longText) {
     var textLengthLimit = 100;
@@ -32,24 +33,43 @@ function getShortText(longText) {
     return longText;
 }
 
+function fixHeight() {
+    chrome.runtime.sendMessage({ message: "setPopupHeight", height: $(".container").height() });
+}
+
 $(document).ready(function() {
-    chrome.runtime.sendMessage({ message : "initCommentPopup"}, function(response) {
+    chrome.runtime.sendMessage({ message: "initCommentPopup"}, function(response) {
         initData = response;
         $("#wikiCaption").text(initData.title);
         $("#selectionText").text(getShortText(initData.selection));
         $("#selectionText").click(function() {
-            $("#selectionText").text(initData.selection);
+            if (!expanded) {
+                $("#selectionText").text(initData.selection);
+                fixHeight();
+                expanded = true;
+            }
         });
+        fixHeight();
     });
 
     $("#buttonClose").bind("click", function() {
-        chrome.runtime.sendMessage({ message : "hidePopup"});
+        chrome.runtime.sendMessage({ message: "hidePopup"});
     });
 
     $("#buttonSave").bind("click", function() {
-        initData.message = "postComment";
-        initData.comment = $("#comment").val();
-        chrome.runtime.sendMessage(initData);
-        $("#buttonSave").text("Sending");
+        var comment = $("#comment").val();
+        if (comment.length > 20) {
+            var data = {};
+            initData.message = "postComment";
+            initData.comment = comment;
+            chrome.runtime.sendMessage(initData);
+            $(".comment-block").toggle(false);
+            $(".submit-block").toggle(true);
+            fixHeight();
+        } else {
+            $(".comment-block .alert").show();
+            fixHeight();
+        }
     });
+
 });

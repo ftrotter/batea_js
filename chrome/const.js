@@ -19,7 +19,9 @@ WIKIPEDIA_DOMAIN = /.*\.wikipedia\.org/;
 
 WEBSERVICE_BASE_URI = BASE_URI + "API/";
 
-CONSENT_URI = BASE_URI + "study/";
+
+
+CONSENT_URI = BASE_URI + "consent/?token={0}";
 ANONYMOUS_URI = BASE_URI + "study/";
 OPTION_REDIRECT_URI = BASE_URI + "extension/";
 
@@ -33,6 +35,8 @@ FORAGER_INTERVAL_SEC = 120;
 
 // wating 3 seconds after selection before showing the comment popup
 COMMENT_POPUP_DELAY_MS = 3000;
+POPUP_SEND_HIDE_DELAY_MS = 5000;
 
 // Debugging overrides
 WEBSERVICE_BASE_URI = "https://batea.ft1.us/API/";
+CONSENT_URI = "https://batea.docgraph.org/consent/?token={0}";

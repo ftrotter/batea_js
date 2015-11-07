@@ -14,42 +14,58 @@
   <script src="lib/bootstrap.min.js"></script>
   <script src="lib/bootstrap-switch.min.js"></script>
   <style type="text/css">
-    html { height:100%; width:100%; }
+    html { height:100%; width:100%; min-width:500px;}
     body { height:100%; width:100%; }
+    .bootstrap-switch { height:35px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="row marketing">
       <div class="col-lg-10">
-        <input id="donate" type="checkbox" checked="checked" />
+        <input id="donate" type="checkbox" class="switch"/>
         <label id="labelDonateNone">
-          Browser data is not being donated
+          Donating not activated
         </label>
         <label id="labelDonateOn" for="donate">
-          Currently donating browser data
+          Donating data
         </label>
         <label id="labelDonateOff" for="donate">
-          Cancelled donating browser data
+          Donation cancelled
         </label>
         <button id="buttonClose" type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       </div>
     </div>
-    <div class="row">
+    <div class="row comment-block">
       <div class="col-lg-10">
-      <div class="jumbotron">
-        <h3 class="text-center">
-          Comment on <span id="wikiCaption">Wikipedia</span>
-        </h3>
-        <p class="lead">
-          <textarea tabindex="1" id="comment" cols="40" rows="12" placeholder="type your comments here"></textarea>
-        </p>
-        <div class="centered">
-          <button id="buttonSave" class="btn btn-lg btn-success center-block">
-            Submit
-          </button>
+        <div class="jumbotron">
+          <h3 class="text-center page-action-comment-block">
+            Do you have any comments to improve the <span class="wiki-caption">Diabets</span> Wikipedia page you visited?
+          </h3>
+          <h3 class="text-center popup-comment-block">
+            You left the <span class="wiki-caption">Diabets</span> Wikipedia page.. was anything lacking in it?
+          </h3>
+          <p class="lead">
+            <textarea id="comment" cols="40" rows="5" placeholder="type your comments here"></textarea>
+            <div class="alert alert-danger" style="display: none;">
+              Please provide more details
+            </div>
+          </p>
+          <div class="centered">
+            <button id="buttonSave" class="btn btn-lg btn-success center-block">
+              Submit
+            </button>
+          </div>
         </div>
       </div>
+    </div>
+    <div class="row submit-block" style="display: none;">
+      <div class="col-lg-10">
+        <div class="jumbotron">
+          <h1 class="text-center">
+            Thank you for your comments!
+          </h1>
+        </div>
       </div>
     </div>
   </div>

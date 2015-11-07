@@ -183,15 +183,8 @@ function VisitProcessor() {
     * @member string
     */
     this.Id = localStorage.id;
-    // Check if we need new id
-    if (this.Id == undefined) {
-        // generate and save unique id if it was not created yet
-        this.setId(this.generateId());
-    }
-
     this._consented = safeParseJSON(localStorage.consented, false);
     this.setClinicalUrls(safeParseJSON(localStorage.clinicalRegex, {}));
-    this.updateStates();
 
     this._dismisses = safeParseJSON(localStorage.dismisses, 0);
     this._sessionDismisses = 0;
@@ -267,13 +260,16 @@ function VisitProcessor() {
     this._foragerTimers = [];
     this._foragerMwConfig = [];
 
-    // No we need to fill cache first time, only after this we can handle new requests
+    // Now we need to fill cache first time, only after this we can handle new requests
     var processor = this;
-    this._cache.refresh(function() {
-        processor._attachListeners();
+
+    // Updated state with possible consent state change then processes history
+    processor.updateStates(function() {
+        processor._cache.refresh(function() {
+            processor._attachListeners();
+        });
     });
 }
-
 
 /**
 * Handler function for chrome.runtime.onMessage Chrome API event
@@ -283,10 +279,10 @@ VisitProcessor.prototype.__onMessage = function(message, sender, sendResponse) {
     if (message.message == "popupWikiComment") {
         console.log(message);
         this.commentInitData = {
-            uri : sender.tab.uri,
-            title : message.title,
-            selection : message.selection,
-            config : message.config,
+            uri: sender.tab.uri,
+            title: message.title,
+            selection: message.selection,
+            config: message.config,
         };
         console.log(this.isPopupAllowed());
         if (this.isPopupAllowed()) {
@@ -312,12 +308,17 @@ VisitProcessor.prototype.__onMessage = function(message, sender, sendResponse) {
             this.hidePopup(sender.tab.id, false);
         }
         this.onDismissForm();
+    } else if (message.message == "setPopupHeight") {
+        console.log(message);
+        this.setPopupHeight(sender.tab.id, message.height);
     } else if (message.message == "postComment") {
         this.postWikiComment(message.uri, message.config, message.comment, message.selection);
         this.hidePopup(sender.tab.id, true);
     } else if (message.message == "postForager") {
         this.postForagerComment(message.uri, message.config, message.comment);
-        this.hidePopup(sender.tab.id, true);
+        if ("tab" in sender) {
+            this.hidePopup(sender.tab.id, true);
+        }
     } else if (message.message == "toggleDonation") {
         if ("tab" in sender) {
             processor._toggleDonation(sender.tab.id, message.state);
@@ -359,6 +360,7 @@ VisitProcessor.prototype.__onVisited = function(historyItem) {
     // first we need to add new history and visit items
     this._cache.addHistory(historyItem);
     this._findVisit(url, lastVisitTime, function(visit) {
+        console.log(visit)
         this._cache.addVisit(visit);
 
         var tabId = this._findRecentTab(url);
@@ -565,7 +567,7 @@ VisitProcessor.prototype.checkForClinicalUrl = function(url, session, callback) 
 * @param {array of string} regexes to use
 */
 VisitProcessor.prototype.setClinicalUrls = function(regexes) {
-    regexes = ["^(?:http(?:s)?://)?(?:[^\.]+\.)?nih\.gov/.*"];
+    //regexes = ["^(?:http(?:s)?://)?(?:[^\.]+\.)?nih\.gov/.*"];
     localStorage.clinicalRegex = JSON.stringify(regexes);
     this.ClinicalUrlsRE = [];
     for (var i = 0; i < regexes.length; ++i) {
@@ -838,13 +840,14 @@ VisitProcessor.prototype.postSession = function(urls, visits) {
         "user_token": this.Id
     };
 
-    /*
-    var webserviceUrl = WEBSERVICE_BASE_URI + "save_tree.php";
-    $.ajax(webserviceUrl, { dataType:"json",
-                            type: "POST",
-                            data: data, success: function(result) {
-    }});
-    */
+    var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/historyTree/new";
+    $.ajax(webserviceUrl, { 
+        dataType:"json",
+        type: "POST",
+        data: data,
+        success: function(result) {
+        }
+    });
 }
 
 /**
@@ -992,19 +995,39 @@ VisitProcessor.prototype._checkForForagerSession = function(tab) {
 }
 
 /**
+* Update clinical URL from webserver
+*/
+VisitProcessor.prototype.updateClinicalUrls = function(callback) {
+    // update clinical domains list
+    webserviceUrl = WEBSERVICE_BASE_URI + "clinicalURLStubs";
+    $.ajax(webserviceUrl, {
+        dataType: "json",
+        type: "GET",
+        data: {},
+        success: function(result) {
+            if (result.is_success) {
+                processor.setClinicalUrls(result.clinicalURLRegex);
+            }
+            callback();
+    }});
+}
+/**
 * Generate unique id for extnesion. It will be used as user token for webserver posts
 *
 * @return {string} new unique token value
 */
-VisitProcessor.prototype.generateId = function() {
+VisitProcessor.prototype.generateId = function(callback) {
     var data = {};
-    var webserviceUrl = WEBSERVICE_BASE_URI + "DonatorToken/new/";
-    $.ajax(webserviceUrl, { dataType: "json",
-                            type: "POST",
-                            data: data, success: function(result) {
-        if (result.is_success) {
-            processor.setId(result.DonatorToken);
-        }
+    var webserviceUrl = WEBSERVICE_BASE_URI + "DonatorToken/new";
+    $.ajax(webserviceUrl, {
+        dataType: "json",
+        type: "POST",
+        data: data,
+        success: function(result) {
+            if (result.is_success) {
+                processor.setId(result.DonatorToken);
+            }
+            callback();
     }});
 
     var d = new Date();
@@ -1013,10 +1036,9 @@ VisitProcessor.prototype.generateId = function() {
 }
 
 /**
-* Check consent state for user
+* Update update user consented state from webserver
 */
-VisitProcessor.prototype.updateStates = function() {
-    // update consented state
+VisitProcessor.prototype.updateConsentedState = function(callback) {
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id;
     $.ajax(webserviceUrl, { dataType: "json",
                             type: "GET",
@@ -1025,18 +1047,22 @@ VisitProcessor.prototype.updateStates = function() {
             processor._consented = result.is_consented;
             localStorage.consented = result.is_consented;
         }
-
-
-        // update clinical domains list
-        webserviceUrl = WEBSERVICE_BASE_URI + "clinicalURLStubs/";
-        $.ajax(webserviceUrl, { dataType: "json",
-                                type: "GET",
-                                data: {}, success: function(result) {
-            if (result.is_success) {
-                processor.setClinicalUrls(result.clinicalURLRegex);
-            }
-        }});
+        callback();
     }});
+}
+
+/**
+* Update user states from webserver
+*/
+VisitProcessor.prototype.updateStates = function(callback) {
+    var processor = this;
+    processor.updateClinicalUrls(function() {
+        if (processor.Id == undefined) {
+            processor.generateId(callback);
+        } else {
+            processor.updateConsentedState(callback);
+        }
+    });
 
     // setup next states update in 24 hours
     setTimeout(function() { processor.updateStates(); }, 
@@ -1051,6 +1077,17 @@ VisitProcessor.prototype.updateStates = function() {
 VisitProcessor.prototype.setId = function(id) {
     this.Id = id;
     localStorage.id = this.Id;
+}
+
+VisitProcessor.prototype.saveSettings = function(data, callback) {
+    var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/saveSettings";
+    $.ajax(webserviceUrl, {
+        dataType: "json",
+        type: "POST",
+        data: data,
+        success: function(result) {
+            callback(result.is_success);
+    }});
 }
 
 /**
@@ -1105,10 +1142,10 @@ VisitProcessor.prototype.isPopupAllowed = function() {
 }
 
 VisitProcessor.prototype.showPopup = function(tabid, page) {
-    var floating = '<div id="bateaPopup" style="right: 10px; top: 30px; border: 0px none; position: fixed; __height: 100%; __width: 100%; z-index: 1000000000;">'
-    + '<div><iframe src="' + chrome.extension.getURL(page) + '" style="height: 506px; width: 506px; padding: 0px; margin: 0px;"></iframe></div></div>';
+    var floating = '<div id="bateaPopup" style="right: 10px; top: 30px; border: 0px none; position: fixed; z-index: 1000000000; display: none;">'
+    + '<div ><iframe src="' + chrome.extension.getURL(page) + '" style="height: 506px; width: 506px; padding: 0px; margin: 0px;"></iframe></div></div>';
 
-    var code = '$("#bateaPopup").remove();$("body").append(\'' + floating + '\');$("#bateaPopup").hide().show(400);'
+    var code = '$("#bateaPopup").remove();$("body").append(\'' + floating + '\');$("#bateaPopup").show(400);'
 
     chrome.tabs.executeScript(tabid, { file: "lib/jquery-2.1.1.js" }, function() {
         chrome.tabs.executeScript(tabid, { code: code });
@@ -1118,8 +1155,13 @@ VisitProcessor.prototype.showPopup = function(tabid, page) {
 VisitProcessor.prototype.hidePopup = function(tabid, fade) {
     var code = '$("#bateaPopup").hide(400, function(){ $("#bateaPopup").remove(); });'
     if (fade) {
-        code = '$("#bateaPopup").fadeOut(1000, function(){ $("#bateaPopup").remove(); });'
+        code = '$("#bateaPopup").fadeOut(' + POPUP_SEND_HIDE_DELAY_MS + ', function(){ $("#bateaPopup").remove(); });'
     }
+    chrome.tabs.executeScript(tabid, { code: code });
+}
+
+VisitProcessor.prototype.setPopupHeight = function(tabid, height) {
+    var code = '$("#bateaPopup iframe").height(' + (height + 6) +');'
     chrome.tabs.executeScript(tabid, { code: code });
 }
 
@@ -1127,15 +1169,16 @@ VisitProcessor.prototype.hidePopup = function(tabid, fade) {
 * Helper function to fill data for forager popup
 *
 */
-VisitProcessor.prototype._getForagerPopupData = function(tabId, closeWindow) {
+VisitProcessor.prototype._getForagerPopupData = function(tabId, isPageAction) {
     var initData = {};
     var visit = this._tab2Visit[tabId];
     if (visit != undefined) {
         var session = this._cache.getSession(visit);
         var config = processor._foragerMwConfig[session];
         initData.title = safeParseJSON(config, {})["wgTitle"];
+        initData.hasWiki = initData.title != undefined;
         initData.donationState = processor._sessions[session];
-        initData.closeWindow = closeWindow;
+        initData.isPageAction = isPageAction;
     }
     return initData;
 }
@@ -1145,9 +1188,9 @@ VisitProcessor.prototype._getForagerPopupData = function(tabId, closeWindow) {
 */
 VisitProcessor.prototype.postForagerComment = function(wikiUri, wikiConfig, comment) {
     var data = {
-        user_comment : comment,
-        last_wikipedia_url : wikiUri,
-        mw_config_set_results : wikiConfig
+        user_comment: comment,
+        last_wikipedia_url: wikiUri,
+        mw_config_set_results: wikiConfig
     };
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/foragerComment/new";
     $.ajax(webserviceUrl, { 
@@ -1162,10 +1205,10 @@ VisitProcessor.prototype.postForagerComment = function(wikiUri, wikiConfig, comm
 */
 VisitProcessor.prototype.postWikiComment = function(wikiUri, wikiConfig, comment, selection) {
     var data = {
-        user_comment : comment,
-        last_wikipedia_url : wikiUri,
-        mw_config_set_results : wikiConfig,
-        user_selected_text : selection
+        user_comment: comment,
+        last_wikipedia_url: wikiUri,
+        mw_config_set_results: wikiConfig,
+        user_selected_text: selection
     };
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/wikiComment/new";
     $.ajax(webserviceUrl, {
@@ -1198,10 +1241,13 @@ VisitProcessor.prototype._attachListeners = function() {
     });
 
     chrome.history.onVisited.addListener(function(historyItem) {
+        console.log(historyItem);
         processor.__onVisited(historyItem);
     });
 
     chrome.tabs.onUpdated.addListener(function(target, changeInfo, tab) {
+        console.log(changeInfo);
+        console.log(tab);
         if (/^(https?):/.test(tab.url)) {
             if (changeInfo.status == "loading") {
                 processor.__onLoading(tab);
