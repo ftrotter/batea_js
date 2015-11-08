@@ -13,6 +13,13 @@
 
 /** @fileOverview Logic for options page */
 
+/**
+* Helper function to show bootstrap validation states for passed node
+*
+* @param {jquery node} node to process
+* @param {bool} success state is mapped to has-success class and glyphicon-ok 
+*                       or to has-error and glyphicon-remove in case of failure
+*/
 function addFormValidation(node, success) {
     var form = node.parent();
     form.remove(".form-control-feedback");
@@ -27,11 +34,15 @@ function addFormValidation(node, success) {
     }
 }
 
+/**
+* Page initialization code
+*/
 $(document).ready(function() {
     var processor = chrome.extension.getBackgroundPage().processor;
 
     $(".av_section_scholar").toggle(processor._consented);
-    $("#av_section_scholar form").attr('action', ANONYMOUS_URI);
+    // TODO: fix this uri
+    //$(".av_section_scholar form").attr('action', ANONYMOUS_URI);
     $(".av_section_anonymous").toggle(!processor._consented);
     $(".av_section_anonymous a").attr('href', CONSENT_URI.replace("{0}", processor.Id));
 

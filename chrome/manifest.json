@@ -14,6 +14,7 @@
   "background": {
     "scripts": [
       "lib/jquery-2.1.1.js",
+      "lib/url-tld.min.js",
       "const.js",
       "background.js"
     ]

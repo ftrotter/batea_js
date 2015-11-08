@@ -13,12 +13,18 @@
 
 /** @fileOverview wikipedia.org content script */
 
+/**
+* global variable to stop comment selection processing timeout
+*/
 var selectionProcessingTimeoutId = null;
 
-function getTitle() {
-    return JSON.parse(getMwConfig())["wgTitle"];
-}
-
+/**
+* Helper function to get "mw.config" string
+* 
+* @return {string} with "wm.content"
+*
+* @todo share this code with background.js somehow
+*/
 function getMwConfig() {
     var script = $("head script").text();
     var start = script.indexOf("mw.config.set({");
@@ -30,6 +36,9 @@ function getMwConfig() {
     return "{}";
 }
 
+/**
+* Page initialization code
+*/
 $(document).on('selectionchange', function(e) {
     if (selectionProcessingTimeoutId != null) {
         clearTimeout(selectionProcessingTimeoutId);
@@ -39,7 +48,7 @@ $(document).on('selectionchange', function(e) {
         selection = window.getSelection().toString();
         if (selection.length > 0) {
             var config = getMwConfig();
-            var title = getTitle();
+            var title = JSON.parse(config)["wgTitle"];
             chrome.runtime.sendMessage({
                 message: "popupWikiComment",
                 selection: selection,
@@ -50,14 +59,4 @@ $(document).on('selectionchange', function(e) {
             console.log("empty selection");
         } 
     }, COMMENT_POPUP_DELAY_MS);
-});
-
-$(document).ready(function() {
-    var config = getMwConfig();
-    var title = getTitle();
-    chrome.runtime.sendMessage({
-        message: "setWikiContent",
-        title: title,
-        config: config
-    });
 });

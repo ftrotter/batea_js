@@ -256,15 +256,38 @@ function VisitProcessor() {
     */
     this._cache = new HistoryCache();
 
+    /**
+    * map to track search query associated to session
+    * @private
+    * @member Array
+    */
+    this._foragerSearchQuery = [];
+
+    /**
+    * map to track session forager state (true/false)
+    * @private
+    * @member Array
+    */
     this._foragerSessions = [];
+
+    /**
+    * map to track started forager timers
+    * @private
+    * @member Array
+    */
     this._foragerTimers = [];
+
+    /**
+    * map to track wiki config associated with session
+    * @private
+    * @member Array
+    */
     this._foragerMwConfig = [];
 
-    // Now we need to fill cache first time, only after this we can handle new requests
     var processor = this;
-
     // Updated state with possible consent state change then processes history
     processor.updateStates(function() {
+        // Now we need to fill cache first time, only after this we can handle new requests
         processor._cache.refresh(function() {
             processor._attachListeners();
         });
@@ -273,23 +296,26 @@ function VisitProcessor() {
 
 /**
 * Handler function for chrome.runtime.onMessage Chrome API event
-*
+* 
+* @param {object} message to receive
+* @param {object} sender information
+* @param {callback} callback function to send response to sender
+* @return {bool} true to respond asynchronisouly, false if response provided by the function
 */
 VisitProcessor.prototype.__onMessage = function(message, sender, sendResponse) {
     if (message.message == "popupWikiComment") {
-        console.log(message);
+        // save wiki comment context and show comment popup
         this.commentInitData = {
             uri: sender.tab.uri,
             title: message.title,
             selection: message.selection,
             config: message.config,
         };
-        console.log(this.isPopupAllowed());
         if (this.isPopupAllowed()) {
-        console.log("comment.html");
             this.showPopup(sender.tab.id, "comment.html");
         }
     } else if (message.message == "initCommentPopup") {
+        // provide wiki comment context to popup iframe
         sendResponse(this.commentInitData);
         return false;
     } else if (message.message == "initForagerPopup") {
@@ -309,17 +335,20 @@ VisitProcessor.prototype.__onMessage = function(message, sender, sendResponse) {
         }
         this.onDismissForm();
     } else if (message.message == "setPopupHeight") {
-        console.log(message);
+        // adjust popup height based on provided value
         this.setPopupHeight(sender.tab.id, message.height);
     } else if (message.message == "postComment") {
+        // post wiki comment to server
         this.postWikiComment(message.uri, message.config, message.comment, message.selection);
         this.hidePopup(sender.tab.id, true);
     } else if (message.message == "postForager") {
+        // post forager comment to server
         this.postForagerComment(message.uri, message.config, message.comment);
         if ("tab" in sender) {
             this.hidePopup(sender.tab.id, true);
         }
     } else if (message.message == "toggleDonation") {
+        // toggle donation state for current tab
         if ("tab" in sender) {
             processor._toggleDonation(sender.tab.id, message.state);
         } else {
@@ -330,21 +359,6 @@ VisitProcessor.prototype.__onMessage = function(message, sender, sendResponse) {
     }
     sendResponse({});
     return false;
-}
-
-VisitProcessor.prototype.getTabMwConfig = function(tabId, callback) {
-    var code = "$('head script').text()"
-    chrome.tabs.executeScript(tabId, { code: code }, function(res) {
-        var script = res[0];
-        var start = script.indexOf("mw.config.set({");
-        if (start >= 0) {
-            start += 14;
-            var end = script.indexOf("});", start);
-            callback(script.substr(start, end - start + 1));
-        } else {
-            callback("{}");
-        }
-    });
 }
 
 /**
@@ -360,7 +374,6 @@ VisitProcessor.prototype.__onVisited = function(historyItem) {
     // first we need to add new history and visit items
     this._cache.addHistory(historyItem);
     this._findVisit(url, lastVisitTime, function(visit) {
-        console.log(visit)
         this._cache.addVisit(visit);
 
         var tabId = this._findRecentTab(url);
@@ -411,7 +424,7 @@ VisitProcessor.prototype.__onLoading = function(tab) {
 */
 VisitProcessor.prototype.__onCompleted = function(tab) {
     if (tab.active) {
-        this._checkForForagerSession(tab);
+        this._checkForForagerSession(tab.id, tab.url);
     }
 }
 
@@ -423,7 +436,7 @@ VisitProcessor.prototype.__onCompleted = function(tab) {
 VisitProcessor.prototype.__onActivated = function(activeInfo) {
     chrome.tabs.get(activeInfo.tabId, function(tab) {
         if (tab.status == "complete") {
-            processor._checkForForagerSession(tab);
+            processor._checkForForagerSession(tab.id, tab.url);
         }
     });
 }
@@ -648,6 +661,55 @@ VisitProcessor.prototype.isClinicalWiki = function(url, session, callback, nonCl
 }
 
 /**
+* Helper function to extract mwConfig from wiki scripts
+* 
+* @param {int} tabId to get scripts from
+* @param {callback} callback function to process scripts extracted asynchroniusly from page
+*/
+VisitProcessor.prototype.getTabMwConfig = function(tabId, callback) {
+    var code = "$('head script').text()"
+    chrome.tabs.executeScript(tabId, { code: code }, function(res) {
+        var script = res[0];
+        if (script != null && script.length > 20) {
+            var start = script.indexOf("mw.config.set({");
+            if (start >= 0) {
+                start += 14;
+                var end = script.indexOf("});", start);
+                callback(script.substr(start, end - start + 1));
+            } else {
+                callback("{}");
+            }
+        } else {
+            callback("{}");
+        }
+    });
+}
+
+/**
+* Parses passed url to extract search query
+*
+* @private
+* @param {url} url to process
+* @return search query string or null if it is not determined
+*/
+VisitProcessor.prototype.getSearchQuery = function(url){
+    var host = getHost(url);
+    // Sepcial case for google
+    if (host.indexOf("www.google.") == 0) {
+        var query = $.url('#q', url);
+        if (query != null) {
+            return query;
+        }
+        return $.url('?q', url);
+    }
+
+    if (host in SEARCH_QUERIES) {
+        return $.url('?' + SEARCH_QUERIES[host], url);
+    }
+    return null;
+}
+
+/**
 * Process new user visit. This is main logic method
 *
 * @private
@@ -679,6 +741,7 @@ VisitProcessor.prototype.processVisit = function(tabId, url, visit) {
         }
     }
     processor._checkForCompletedSession(tabId, session);
+    processor._checkForForagerSession(tabId, url);
 }
 
 /**
@@ -951,11 +1014,12 @@ VisitProcessor.prototype._isSessionActive = function(session) {
 /**
 * Check for forager session
 *
-* @param {Tab} tab to save data
+* @param {int} tabId of analyzed tab
+* @param {string} url of the tab
 */
-VisitProcessor.prototype._checkForForagerSession = function(tab) {
+VisitProcessor.prototype._checkForForagerSession = function(tabId, url) {
     // 1. We need to find session id
-    var visit = this._tab2Visit[tab.id];
+    var visit = this._tab2Visit[tabId];
     if (visit == undefined) {
         return;
     }
@@ -966,18 +1030,40 @@ VisitProcessor.prototype._checkForForagerSession = function(tab) {
     clearTimeout(this._foragerTimers[session]);
 
     // 3. check for clinical wiki and set flag if needed
-    var host = getHost(tab.url);
-    this.isClinicalWiki(tab.url, session,
+    var host = getHost(url);
+    this.isClinicalWiki(url, session,
         function(session) {
            processor._foragerSessions[session] = true;
-           processor.getTabMwConfig(tab.id, function(config) {
+           processor.getTabMwConfig(tabId, function(config) {
                processor._foragerMwConfig[session] = config;
            });
         },
         function(session) {
-            // 4. setTimeout if clinical wiki flag is set
+            // 4. extract search query for passed url
+            var searchQuery = processor.getSearchQuery(url);
+            if (searchQuery != null) {
+                // and reset forager state if search query has been changed
+                if (processor._foragerSearchQuery[session] != searchQuery) {
+                   processor._foragerSearchQuery[session] = searchQuery;
+                   processor._foragerSessions[session] = false;
+                }
+                return;
+            }
+            // 5. setTimeout if clinical wiki flag is set
             if (processor._foragerSessions[session]) {
-                var tabId = tab.id;
+                // 6. do not consider pages as forager to which user havigates from wiki pages
+                var referrerVisit = processor._cache.getVisitById(visit.referringVisitId);
+                console.log(referrerVisit);
+                if (referrerVisit != undefined) {
+                    var referrerHistory = processor._cache.getHistory(referrerVisit);
+                    console.log(referrerHistory);
+                    console.log(getHost(referrerHistory.url));
+                    if (WIKIPEDIA_DOMAIN.test(getHost(referrerHistory.url))) {
+                        //console.log("Referrer is a wikipedia page");
+                        return;
+                    }
+                }
+
                 console.log("Set forager timeout");
                 processor._foragerTimers[session] = setTimeout(function() {
                     // show forager form
@@ -986,8 +1072,6 @@ VisitProcessor.prototype._checkForForagerSession = function(tab) {
                     if (this.isPopupAllowed()) {
                         processor.showPopup(tabId, "forager.html");
                     }
-
-                    //processor.showForager(tab.id);
                 }, FORAGER_INTERVAL_SEC * 1000);
             }
         });
@@ -996,6 +1080,8 @@ VisitProcessor.prototype._checkForForagerSession = function(tab) {
 
 /**
 * Update clinical URL from webserver
+*
+* @param {callback} callback to call on webservice call completion
 */
 VisitProcessor.prototype.updateClinicalUrls = function(callback) {
     // update clinical domains list
@@ -1011,10 +1097,11 @@ VisitProcessor.prototype.updateClinicalUrls = function(callback) {
             callback();
     }});
 }
+
 /**
-* Generate unique id for extnesion. It will be used as user token for webserver posts
+* Generate unique id for extnesion (take it form the webserver). It will be used as user token for webserver posts
 *
-* @return {string} new unique token value
+* @param {callback} callback to call on webservice call completion
 */
 VisitProcessor.prototype.generateId = function(callback) {
     var data = {};
@@ -1029,14 +1116,12 @@ VisitProcessor.prototype.generateId = function(callback) {
             }
             callback();
     }});
-
-    var d = new Date();
-    var maxSuffix = 10000;
-    return "nnnnn" + d.getTime() * maxSuffix + Math.ceil(Math.random() * maxSuffix);
 }
 
 /**
 * Update update user consented state from webserver
+*
+* @param {callback} callback to call on webservice call completion
 */
 VisitProcessor.prototype.updateConsentedState = function(callback) {
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id;
@@ -1053,6 +1138,8 @@ VisitProcessor.prototype.updateConsentedState = function(callback) {
 
 /**
 * Update user states from webserver
+*
+* @param {callback} callback to call once all states have been updated
 */
 VisitProcessor.prototype.updateStates = function(callback) {
     var processor = this;
@@ -1079,6 +1166,12 @@ VisitProcessor.prototype.setId = function(id) {
     localStorage.id = this.Id;
 }
 
+/**
+* Save user settings to webserver
+*
+* @param {object} data to send to webserver
+* @param {callback} callback to call once information posed to the webserver
+*/
 VisitProcessor.prototype.saveSettings = function(data, callback) {
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/saveSettings";
     $.ajax(webserviceUrl, {
@@ -1091,7 +1184,7 @@ VisitProcessor.prototype.saveSettings = function(data, callback) {
 }
 
 /**
-* Helper function to track forager and comment forms closing
+* Helper function to track forager or comment popups closing without commenting
 */
 VisitProcessor.prototype.onDismissForm = function() {
     ++this._dismisses;
@@ -1119,6 +1212,8 @@ VisitProcessor.prototype.onDismissForm = function() {
 
 /**
 * Helper function to update allowPopup flag
+*
+* @param {bool} allow is a new value for the "allow popup" flag
 */
 VisitProcessor.prototype.setAllowPopup = function(allow) {
     this._allowPopup = allow;
@@ -1136,38 +1231,60 @@ VisitProcessor.prototype.setAllowPopup = function(allow) {
 
 /**
 * Helper function to get allowPopup flag
+*
+* @return {bool} current "allow popup" flag value
 */
 VisitProcessor.prototype.isPopupAllowed = function() {
     return this._allowPopup;
 }
 
-VisitProcessor.prototype.showPopup = function(tabid, page) {
+/**
+* Helper function to inject popup to tab content
+*
+* @param {int} tabId is id of tab to inject the iframe
+* @param {string} page is filename of popup to inject
+*/
+VisitProcessor.prototype.showPopup = function(tabId, page) {
     var floating = '<div id="bateaPopup" style="right: 10px; top: 30px; border: 0px none; position: fixed; z-index: 1000000000; display: none;">'
     + '<div ><iframe src="' + chrome.extension.getURL(page) + '" style="height: 506px; width: 506px; padding: 0px; margin: 0px;"></iframe></div></div>';
 
     var code = '$("#bateaPopup").remove();$("body").append(\'' + floating + '\');$("#bateaPopup").show(400);'
 
-    chrome.tabs.executeScript(tabid, { file: "lib/jquery-2.1.1.js" }, function() {
-        chrome.tabs.executeScript(tabid, { code: code });
+    chrome.tabs.executeScript(tabId, { file: "lib/jquery-2.1.1.js" }, function() {
+        chrome.tabs.executeScript(tabId, { code: code });
     });
 }
 
-VisitProcessor.prototype.hidePopup = function(tabid, fade) {
+/**
+* Helper function to remove Batea popup from tab content
+*
+* @param {int} tabId is id of tab to remobe the popup
+* @param {bool} fade is set to true to apply fade animation for reming popup
+*/
+VisitProcessor.prototype.hidePopup = function(tabId, fade) {
     var code = '$("#bateaPopup").hide(400, function(){ $("#bateaPopup").remove(); });'
     if (fade) {
         code = '$("#bateaPopup").fadeOut(' + POPUP_SEND_HIDE_DELAY_MS + ', function(){ $("#bateaPopup").remove(); });'
     }
-    chrome.tabs.executeScript(tabid, { code: code });
+    chrome.tabs.executeScript(tabId, { code: code });
 }
 
-VisitProcessor.prototype.setPopupHeight = function(tabid, height) {
+/**
+* Helper function to adjust Batea popup height within tab
+*
+* @param {int} tabId is id of tab to process
+* @param {int} height of iframe content
+*/
+VisitProcessor.prototype.setPopupHeight = function(tabId, height) {
     var code = '$("#bateaPopup iframe").height(' + (height + 6) +');'
-    chrome.tabs.executeScript(tabid, { code: code });
+    chrome.tabs.executeScript(tabId, { code: code });
 }
 
 /**
 * Helper function to fill data for forager popup
 *
+* @param {int} tabId is id of tab to show forager popup
+* @param {bool} isPageAction is set to true if popup is shown by page action click
 */
 VisitProcessor.prototype._getForagerPopupData = function(tabId, isPageAction) {
     var initData = {};
@@ -1184,7 +1301,28 @@ VisitProcessor.prototype._getForagerPopupData = function(tabId, isPageAction) {
 }
 
 /**
+* Helper function to set new donation state for passed tabId
+*
+* @param {int} tabId is id of tab to process
+* @param {bool} state of donatable session
+*/
+VisitProcessor.prototype._toggleDonation = function(tabId, state) {
+    var visit = this._tab2Visit[tabId];
+    // First check if we have visit associated with the tab
+    if (visit != null) {
+        // get current session state
+        var session = this._cache.getSession(visit);
+        // and update icons for every session's tab
+        this._setSessionState(session, state);
+    }
+}
+
+/**
 * post forager comment to webservice
+*
+* @param {string} wikiUri is a page uri
+* @param {string} wikiConfig is a wiki "mw.config" JSON object
+* @param {string} comment to post
 */
 VisitProcessor.prototype.postForagerComment = function(wikiUri, wikiConfig, comment) {
     var data = {
@@ -1202,6 +1340,11 @@ VisitProcessor.prototype.postForagerComment = function(wikiUri, wikiConfig, comm
 
 /**
 * post comment to webservice
+*
+* @param {string} wikiUri is a page uri
+* @param {string} wikiConfig is a wiki "mw.config" JSON object
+* @param {string} comment to post
+* @param {string} user selection on wiki page
 */
 VisitProcessor.prototype.postWikiComment = function(wikiUri, wikiConfig, comment, selection) {
     var data = {
@@ -1218,17 +1361,6 @@ VisitProcessor.prototype.postWikiComment = function(wikiUri, wikiConfig, comment
     }});
 }
 
-VisitProcessor.prototype._toggleDonation = function(tabId, state) {
-    var visit = this._tab2Visit[tabId];
-    // First check if we have visit associated with the tab
-    if (visit != null) {
-        // get current session state
-        var session = this._cache.getSession(visit);
-        // and update icons for every session's tab
-        this._setSessionState(session, state);
-    }
-}
-
 /**
 * Helper function to attach all necessary event listeners
 * and start user interactions processing
@@ -1241,13 +1373,10 @@ VisitProcessor.prototype._attachListeners = function() {
     });
 
     chrome.history.onVisited.addListener(function(historyItem) {
-        console.log(historyItem);
         processor.__onVisited(historyItem);
     });
 
     chrome.tabs.onUpdated.addListener(function(target, changeInfo, tab) {
-        console.log(changeInfo);
-        console.log(tab);
         if (/^(https?):/.test(tab.url)) {
             if (changeInfo.status == "loading") {
                 processor.__onLoading(tab);

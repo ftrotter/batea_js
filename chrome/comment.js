@@ -13,11 +13,27 @@
 
 /** @fileOverview Logic for comment page */
 
+
+/**
+* global object with form initialization data, could be used to update popup 
+* state and send comment back to webserver
+*/
 var initData = {};
+
+/**
+* global flag to avoid second comment part expansion by click.
+* Second click adds scrollbar to popup becuase height is not calualated correctly.
+*/
 var expanded = false;
 
+/**
+* Helper function to get short version of selection text to fit into popup
+*
+* @param {string} full text
+* @return {string} truncated text
+*/
 function getShortText(longText) {
-    var textLengthLimit = 100;
+    var textLengthLimit = POPUP_SHORT_COMMENT_LENGTH;
     var textLengthSuffixLength = textLengthLimit / 5;
     if (longText.length < textLengthLimit) {
         return longText;
@@ -33,10 +49,16 @@ function getShortText(longText) {
     return longText;
 }
 
+/**
+* Helper function to adjust popup height based on its content
+*/
 function fixHeight() {
     chrome.runtime.sendMessage({ message: "setPopupHeight", height: $(".container").height() });
 }
 
+/**
+* Page initialization code
+*/
 $(document).ready(function() {
     chrome.runtime.sendMessage({ message: "initCommentPopup"}, function(response) {
         initData = response;

@@ -13,15 +13,30 @@
 
 /** @fileOverview Logic for forager popup */
 
+/**
+* flag is set to true if popup is opened by page action icon click
+*/
 var isPageAction = false;
+
+/**
+* flag is set to true if popup is opened for tab with clinical wiki content
+*/
 var hasWiki = false;
 
-function updateDonationState(donationState) {
+/**
+* Helper function to show donation label based on proivded state
+*
+* @param {bool} donationState to update
+*/
+function updateDonationLabel(donationState) {
     $("#labelDonateNone").toggle(donationState == undefined);
     $("#labelDonateOn").toggle(donationState);
     $("#labelDonateOff").toggle(donationState == false);
 }
 
+/**
+* Helper function to adjust popup height based on its content
+*/
 function fixHeight() {
     if (isPageAction) {
         $("html").css("height", $(".container").height());
@@ -33,6 +48,9 @@ function fixHeight() {
     }
 }
 
+/**
+* Page initialization code
+*/
 $(document).ready(function() {
     chrome.runtime.sendMessage({ message: "initForagerPopup"}, function(response) {
         isPageAction = response.isPageAction;
@@ -44,14 +62,14 @@ $(document).ready(function() {
         $("#donate").prop('checked', !!response.donationState);
         $(".page-action-comment-block").toggle(isPageAction);
         $(".popup-comment-block").toggle(!isPageAction);
-        updateDonationState(response.donationState);
+        updateDonationLabel(response.donationState);
         $(".comment-block").toggle(response.donationState && hasWiki);
         var options = {
             onColor: 'success',
             offColor: 'danger',
             animate: true,
             onSwitchChange: function(event, state) {
-                updateDonationState(state);
+                updateDonationLabel(state);
                 $(".comment-block").slideToggle({
                     progress: function() {
                         fixHeight();
