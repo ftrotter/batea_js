@@ -15,7 +15,8 @@
 
 BASE_URI = "http://batea.docgraph.org/";
 
-WEBSERVICE_BASE_URI = BASE_URI + "API/";
+WEBSERVICE_BASE_URI = "https://bateaapi.docgraph.org/API/";
+
 CONSENT_URI = BASE_URI + "consent/?token={0}";
 ANONYMOUS_URI = BASE_URI + "study/";
 OPTION_REDIRECT_URI = BASE_URI + "extension/";
@@ -40,10 +41,3 @@ SEARCH_QUERIES = {
     'search.yahoo.com': 'p',
     'www.bing.com': 'q'
 };
-
-
-
-// Debugging overrides
-WEBSERVICE_BASE_URI = "https://batea.ft1.us/API/";
-CONSENT_URI = "https://batea.docgraph.org/consent/?token={0}";
-

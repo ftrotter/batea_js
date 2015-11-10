@@ -204,8 +204,15 @@ function VisitProcessor() {
     * @private
     * @member object
     */ 
-    
     this._clinicalUrlChecks = {};
+
+    /**
+    * Request queue to avoid duplicate queries to webserver
+    * @private
+    * @member array
+    */ 
+    this._clinicalUrlRequests = [];
+
     /**
     * Store pair {tabid, url} for recently updated tabs
     * @private
@@ -634,21 +641,18 @@ VisitProcessor.prototype.isClinicalWiki = function(url, session, callback, nonCl
     if (WIKIPEDIA_DOMAIN.test(host)) {
         if (!processor.checkClinicalOnlyWiki()) {
             is_clinical = true;
-        // TODO: Save this map to cache instead of session?
-        // Check if we queried webservice with passed url already
-        } else if (processor._clinicalUrlChecks.hasOwnProperty(url)) {
-            is_clinical = processor._clinicalUrlChecks[url];
         } else {
-            // Query webservice with passed url
-            var webserviceUrl = WEBSERVICE_BASE_URI + "isURLClinical/" + btoa(url);
-            $.ajax(webserviceUrl, { dataType:"json", success: function(result) {
-                processor._clinicalUrlChecks[url] = result.is_clinical;
-                if (result.is_success && result.is_clinical) {
-                    callback(session);
-                } else if (nonClinicalCallback) {
-                    nonClinicalCallback(session);
-                }
-            }});
+            // Add to list to avoid duplicate qqueries to webserver
+            processor._clinicalUrlRequests.push({
+                url: url,
+                session: session,
+                callback: callback,
+                nonClinicalCallback: nonClinicalCallback
+            });
+
+            if (processor._clinicalUrlRequests.length == 1) {
+                processor.queryClinicalUrl();
+            }
             return;
         }
     }
@@ -657,6 +661,46 @@ VisitProcessor.prototype.isClinicalWiki = function(url, session, callback, nonCl
         callback(session);
     } else if (nonClinicalCallback) {
         nonClinicalCallback(session);
+    }
+}
+
+/**
+* Query webserver for clinical url.
+*
+* @private
+* @param {string} url to check
+* @param {number} session id  associated with the url
+* @param {function} callback to be called if url is clinical. session vlaue is passed as parameter to callback
+* @param {function} nonClinicalCallback to be called if url is not clinical. session vlaue is passed as parameter to callback
+*/
+VisitProcessor.prototype.queryClinicalUrl = function() {
+    if (processor._clinicalUrlRequests.length == 0) {
+        return;
+    }
+    var query = processor._clinicalUrlRequests[0];
+    // TODO: Save this map to cache instead of session?
+    // Check if we queried webservice with passed url already
+    if (processor._clinicalUrlChecks.hasOwnProperty(query.url)) {
+        if (processor._clinicalUrlChecks[query.url]) {
+            query.callback(query.session);
+        } else if (query.nonClinicalCallback) {
+            query.nonClinicalCallback(query.session);
+        }
+        processor._clinicalUrlRequests.shift();
+        processor.queryClinicalUrl();
+    } else {
+        // Query webservice with passed url
+        var webserviceUrl = WEBSERVICE_BASE_URI + "isURLClinical/" + btoa(query.url);
+        $.ajax(webserviceUrl, { dataType:"json", success: function(result) {
+            processor._clinicalUrlChecks[query.url] = result.is_clinical;
+            if (result.is_success && result.is_clinical) {
+                query.callback(query.session);
+            } else if (query.nonClinicalCallback) {
+                query.nonClinicalCallback(query.session);
+            }
+            processor._clinicalUrlRequests.shift();
+            processor.queryClinicalUrl();
+        }});
     }
 }
 
@@ -902,7 +946,6 @@ VisitProcessor.prototype.postSession = function(urls, visits) {
         "url_tree": JSON.stringify({ chrome_urls: urls, chrome_visits: visits }),
         "user_token": this.Id
     };
-
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/historyTree/new";
     $.ajax(webserviceUrl, { 
         dataType:"json",
@@ -1131,6 +1174,7 @@ VisitProcessor.prototype.updateConsentedState = function(callback) {
         if (result.is_success) {
             processor._consented = result.is_consented;
             localStorage.consented = result.is_consented;
+            localStorage.email_provided = result.email_provided;
         }
         callback();
     }});
@@ -1164,6 +1208,15 @@ VisitProcessor.prototype.updateStates = function(callback) {
 VisitProcessor.prototype.setId = function(id) {
     this.Id = id;
     localStorage.id = this.Id;
+}
+
+/**
+* get email flag for user
+*
+* @return {bool} true is user provided email already
+*/
+VisitProcessor.prototype.emailProvided = function() {
+    return safeParseJSON(localStorage.email_provided, false);
 }
 
 /**

@@ -38,8 +38,8 @@ function addFormValidation(node, success) {
 * Page initialization code
 */
 $(document).ready(function() {
+    // TODO: update _consented state after form
     var processor = chrome.extension.getBackgroundPage().processor;
-
     $(".av_section_scholar").toggle(processor._consented);
     // TODO: fix this uri
     //$(".av_section_scholar form").attr('action', ANONYMOUS_URI);
@@ -51,6 +51,8 @@ $(document).ready(function() {
 
     $("#popupAllow").prop('checked', processor.isPopupAllowed());
     $("#popupDisable").prop('checked', !processor.isPopupAllowed());
+
+    $(".subscribe-form").toggle(!processor.emailProvided());
 
     $("input[name='record']").on("change", function () {
         if (this.value == "any") {
@@ -81,6 +83,10 @@ $(document).ready(function() {
         selected = $("input[name='care']:checked");
         if (selected.length > 0) {
             settings.receiving_clinical_care = selected.parent().text().trim();
+        }
+        var email = $("#email").val().trim();
+        if (email.length > 0) {
+            settings.email = email;
         }
         processor.saveSettings(settings);
     });
