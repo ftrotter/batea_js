@@ -189,7 +189,7 @@ function VisitProcessor() {
     this._dismisses = safeParseJSON(localStorage.dismisses, 0);
     this._sessionDismisses = 0;
 
-    this._allowPopup = safeParseJSON(localStorage.allowPopup, false);
+    this._allowPopup = safeParseJSON(localStorage.allowPopup, true);
     var sleepTime = safeParseJSON(localStorage.dismissesExpire, 0) - Date.now();
     if (sleepTime > 0) {
         this._allowPopup = false;
@@ -943,7 +943,7 @@ VisitProcessor.prototype.donateSession = function(session) {
 */
 VisitProcessor.prototype.postSession = function(urls, visits) {
     var data = {
-        "url_tree": JSON.stringify({ chrome_urls: urls, chrome_visits: visits }),
+        "url_tree": { chrome_urls: urls, chrome_visits: visits },
         "user_token": this.Id
     };
     var webserviceUrl = WEBSERVICE_BASE_URI + "Donator/" + this.Id + "/historyTree/new";
