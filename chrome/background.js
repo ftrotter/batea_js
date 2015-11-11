@@ -1299,7 +1299,7 @@ VisitProcessor.prototype.isPopupAllowed = function() {
 */
 VisitProcessor.prototype.showPopup = function(tabId, page) {
     var floating = '<div id="bateaPopup" style="right: 10px; top: 30px; border: 0px none; position: fixed; z-index: 1000000000; display: none;">'
-    + '<div ><iframe src="' + chrome.extension.getURL(page) + '" style="height: 506px; width: 506px; padding: 0px; margin: 0px;"></iframe></div></div>';
+    + '<div ><iframe src="' + chrome.extension.getURL(page) + '" style="height: 322px; width: 362px; padding: 0px; margin: 0px;"></iframe></div></div>';
 
     var code = '$("#bateaPopup").remove();$("body").append(\'' + floating + '\');$("#bateaPopup").show(400);'
 
