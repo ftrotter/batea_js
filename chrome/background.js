@@ -4,7 +4,7 @@
  *
  * @copyright 2014-2015, The DocGraph Journal.
  * All rights reserved.
- * http://batea.docgraph.org
+ * http://batea.docgraph.com
  *
  * @author Fred Trotter <fred.trotter@gmail.com>
  * @author Andrey Ivanov <andrey.v.ivanov@gmail.com>

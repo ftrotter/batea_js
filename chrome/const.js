@@ -4,7 +4,7 @@
  *
  * @copyright 2014-2015, The DocGraph Journal.
  * All rights reserved.
- * http://batea.docgraph.org
+ * http://batea.docgraph.com
  *
  * @author Fred Trotter <fred.trotter@gmail.com>
  * @author Andrey Ivanov <andrey.v.ivanov@gmail.com>
@@ -13,9 +13,9 @@
 
 /** @fileOverview This is a common place for main project constants */
 
-BASE_URI = "http://batea.docgraph.org/";
+BASE_URI = "http://batea.docgraph.com/";
 
-WEBSERVICE_BASE_URI = "https://bateaapi.docgraph.org/API/";
+WEBSERVICE_BASE_URI = "https://bateaapi.docgraph.com/API/";
 
 CONSENT_URI = BASE_URI + "consent/?token={0}";
 ANONYMOUS_URI = BASE_URI + "study/";
