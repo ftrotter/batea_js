@@ -1,2 +1,2 @@
 #!/bin/sh
-zip ../../andrey_batea.zip . -r -x *.git*
+zip ../../batea_upload.zip . -r -x *.git*
