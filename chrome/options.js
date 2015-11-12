@@ -52,7 +52,7 @@ $(document).ready(function() {
     $("#popupAllow").prop('checked', processor.isPopupAllowed());
     $("#popupDisable").prop('checked', !processor.isPopupAllowed());
 
-    $(".subscribe-form").toggle(!processor.emailProvided());
+    //$(".subscribe-form").toggle(!processor.emailProvided());
 
     $("input[name='record']").on("change", function () {
         if (this.value == "any") {
@@ -74,21 +74,35 @@ $(document).ready(function() {
         window.close();
     });
 
+	function saveTheseSettings() {
+
+		console.log('in saveTheseSettings');
+
+        	var settings = {};
+        	var selected = $("input[name='involved']:checked");
+        	if (selected.length > 0) {
+            		settings.delivering_clinical_care = selected.parent().text().trim();
+        	}
+        	selected = $("input[name='care']:checked");
+        	if (selected.length > 0) {
+            		settings.receiving_clinical_care = selected.parent().text().trim();
+        	}
+		console.log('about to send all my settings to saveSetting');
+        	processor.saveSettings(settings);
+
+	}
+
+
+    $("input[name='involved']").on("change", function () {
+		saveTheseSettings();
+	});
+
+    $("input[name='care']").on("change", function () {
+		saveTheseSettings();
+	});
+
     $("#buttonScholar").bind("click", function() {
-        var settings = {};
-        var selected = $("input[name='involved']:checked");
-        if (selected.length > 0) {
-            settings.delivering_clinical_care = selected.parent().text().trim();
-        }
-        selected = $("input[name='care']:checked");
-        if (selected.length > 0) {
-            settings.receiving_clinical_care = selected.parent().text().trim();
-        }
-        var email = $("#email").val().trim();
-        if (email.length > 0) {
-            settings.email = email;
-        }
-        processor.saveSettings(settings);
+		saveTheseSettings();
     });
 
     $("#subscribe").click(function() {
@@ -104,7 +118,9 @@ $(document).ready(function() {
                     $("#subscribe span").hide();
                 }
             });
-        }
+        }else{	
+	//	console.log('checkvalid failed');
+	}
     });
 
     // Just fills token id value into debug text field
