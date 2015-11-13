@@ -1115,7 +1115,7 @@ VisitProcessor.prototype._checkForForagerSession = function(tabId, url) {
                     if (this.isPopupAllowed()) {
                         processor.showPopup(tabId, "forager.html");
                     }
-                }, FORAGER_INTERVAL_SEC * 1000);
+                }, FORAGER_INACTIVE_INTERVAL_SEC * 1000);
             }
         });
 
@@ -1158,6 +1158,7 @@ VisitProcessor.prototype.generateId = function(callback) {
                 processor.setId(result.DonatorToken);
             }
             callback();
+            processor.onFirstRun(true);
     }});
 }
 
@@ -1189,7 +1190,17 @@ VisitProcessor.prototype.updateStates = function(callback) {
     var processor = this;
     processor.updateClinicalUrls(function() {
         if (processor.Id == undefined) {
-            processor.generateId(callback);
+            chrome.storage.sync.get(null, function(items){
+                if ('id' in items) {
+                    processor.Id = localStorage.id = items.id;
+                    processor.updateConsentedState(function() {
+                        callback();
+                        processor.onFirstRun(false);
+                    });
+                } else {
+                    processor.generateId(callback);
+                }
+            });
         } else {
             processor.updateConsentedState(callback);
         }
@@ -1208,6 +1219,9 @@ VisitProcessor.prototype.updateStates = function(callback) {
 VisitProcessor.prototype.setId = function(id) {
     this.Id = id;
     localStorage.id = this.Id;
+    chrome.storage.sync.set({
+      'id': id
+    });
 }
 
 /**
@@ -1232,7 +1246,9 @@ VisitProcessor.prototype.saveSettings = function(data, callback) {
         type: "POST",
         data: data,
         success: function(result) {
-            callback(result.is_success);
+            if (callback) {
+                callback(result.is_success);
+            }
     }});
 }
 
@@ -1295,11 +1311,11 @@ VisitProcessor.prototype.isPopupAllowed = function() {
 * Helper function to inject popup to tab content
 *
 * @param {int} tabId is id of tab to inject the iframe
-* @param {string} page is filename of popup to inject
+* @param {string} page is filename of extension HTML page to inject as popup
 */
 VisitProcessor.prototype.showPopup = function(tabId, page) {
     var floating = '<div id="bateaPopup" style="right: 10px; top: 30px; border: 0px none; position: fixed; z-index: 1000000000; display: none;">'
-    + '<div ><iframe src="' + chrome.extension.getURL(page) + '" style="height: 322px; width: 362px; padding: 0px; margin: 0px;"></iframe></div></div>';
+    + '<div><iframe src="' + chrome.extension.getURL(page) + '" style="height: ' + POPUP_HEIGHT + 'px; width: ' + POPUP_WIDTH + 'px; padding: 0px; margin: 0px;"></iframe></div></div>';
 
     var code = '$("#bateaPopup").remove();$("body").append(\'' + floating + '\');$("#bateaPopup").show(400);'
 
@@ -1412,6 +1428,16 @@ VisitProcessor.prototype.postWikiComment = function(wikiUri, wikiConfig, comment
         type: "POST",
         data: data, success: function(result) {
     }});
+}
+
+/**
+* common place to run an initalization routines right after extension install.
+* Note: This function does not run after extension upgrade
+*
+* @param {bool} firstUserInstall is set to false if user installed extension on another PC previously
+*/
+VisitProcessor.prototype.onFirstRun = function(firstUserInstall) {
+    chrome.tabs.create({ 'url': chrome.extension.getURL('options.html'), active: true });
 }
 
 /**
