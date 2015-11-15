@@ -1,0 +1,406 @@
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title id="optionTitle"></title>
+
+  <script type="text/javascript" src="lib/jquery-2.1.1.js"></script>
+  <script type="text/javascript" src="const.js"></script>
+  <script type="text/javascript" src="options.js"></script>
+
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+  <script src="lib/bootstrap.min.js"></script>
+
+  <style type="text/css">
+    .glyphicon.spinning {
+      animation: spin 1s infinite linear;
+    }
+    @keyframes spin {
+      from { transform: scale(1) rotate(0deg); }
+      to { transform: scale(1) rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header clearfix">
+      <nav>
+        <ul class="nav nav-pills pull-right">
+          <li role="presentation"><a href="http://batea.docgraph.org/informedconsent/#privacy">Privacy</a></li>
+          <li role="presentation"><a href="http://batea.docgraph.org/informedconsent/#contact">Contact Researchers</a></li>
+          <li role="presentation"><a href="http://batea.docgraph.org/informedconsent/#credits">Credits</a></li>
+        </ul>
+      </nav>
+      <h3 class="text-muted"><img src="img/icon-48.png" /> Batea Settings</h3>
+    </div>
+
+    <div class="row marketing av_section_scholar">
+      <div class="col-lg-12">
+        <h3>
+          You are donating browsing data as a Scholar in the Batea study.
+        </h3>
+        <p>
+          Thank you for joining Batea as a Scholar. We are excited you want
+          to help us improve Wikipedia medical articles!
+        </p>
+        <p>
+          By signing up as a Scholar, you have helped the study significantly.
+          Identifying yourself helps us classify your data. This will be 
+          useful as we analyze aggregate your data with others' to see
+          browsing trends. 
+        </p>
+        <h4>
+          Remember:
+        </h4>
+        <p>
+          1. Batea only uploads browsing sessions to its server if they are 
+          clinical-related. We have multiple checks in place to make sure 
+          nothing personal is uploaded from your browser or added to a Batea 
+          data set.
+        </p>
+        <p>
+          2. You may stop Batea from recording and uploading your current 
+          session by pressing its icon in your search bar (turning it red).
+          These icon colors tell you what Batea is doing:
+        </p>
+        <div class="centered">
+          <img src="img/recording_statuses.png" class="center-block"/>
+        </div>
+        <p>
+          3. Batea will de-identify and anonymize your browsing data before
+          it is released to the public. Though you have identified yourself
+          to Batea researchers, we won't identify you in any of our publicly
+          released data sets. 
+        </p>
+      </div>
+    </div>
+    <div class="row marketing av_section_scholar">
+      <div class="col-lg-12">
+        <p>
+          As a Scholar, you will have:
+        </p>
+        <p>
+          1. the option to promote yourself as a Batea Scholar (great for CVs,
+          resumes, etc)
+        </p>
+        <p>
+          2. your name mentioned in data and research credits (opt-out of this
+          by emailing us) 
+        </p>
+        <p>
+          3. ability to download and examine your own data
+        </p>
+        <p>
+          4. the opportunity to interact with the researchers about Batea
+        </p>
+      </div>
+    </div>
+    <div class="jumbotron av_section_scholar">
+      <h1 class="text-center">
+          Participation level
+      </h1>
+      <p class="lead">
+        You can opt-out of being a Scholar and go back to being an anonymous
+        Batea user. Just click the button below and we will remove your
+        identifiable information from our server. However, if we have already
+        released a (de-identified) dataset for public download, it will be
+        impossible to remove your de-identified browsing data completely.
+      </p>
+      <div class="centered">
+        <button id="buttonAnonymous" class="btn btn-lg btn-success center-block">
+          I'd rather donate data anonymously
+          <span class="glyphicon glyphicon-refresh spinning" style="display:none;"></span>
+        </button>
+      </div>
+    </div>
+    <div class="row marketing av_section_anonymous">
+      <div class="col-lg-12">
+        <h3 class="text-center">
+          You are donating browsing data as an
+          anonymous participant in the Batea study
+        </h3>
+        <p>
+          Thank you for joining Batea. We are excited you want to help us 
+          improve Wikipedia medical articles!
+        </p>
+        <h4>
+          Remember:
+        </h4>
+        <p>
+          1. Batea only uploads browsing sessions to its server if they are 
+          clinical-related. We have multiple checks in place to make sure 
+          nothing personal is uploaded from your browser or added to 
+          a Batea data set.
+        </p>
+        <p>
+          2. You may stop Batea from recording and uploading your current 
+          session by pressing its icon in your search bar (turning it red).
+          These icon colors tell you what Batea is doing:
+        </p>
+        <div class="centered">
+          <img src="img/recording_statuses.png" class="center-block"/>
+        </div>
+      </div>
+    </div>
+    <div class="jumbotron av_section_anonymous">
+      <h1 class="text-center">
+          Batea Scholar Option
+      </h1>
+      <p class="lead">
+          Scholars donate higher quality data to help Batea better categorize
+          browsing and survey information. This optional participation level
+          involves giving Batea your name and other 
+          identifying information, and requires an additional 
+          consent process. Unless you opt-in to become a Batea Scholar, you 
+          will by default remain anonymous.
+      </p>
+      <p class="lead">
+          Scholars will:
+      </p>
+      <p class="lead">
+          - be welcome and encouraged to promote their participation
+      </p>
+      <p class="lead">
+          - be able to download and examine their browsing data
+      </p>
+      <p class="lead">
+          - have the opportunity to interact with researchers to improve the project
+      </p>
+      <p class="text-center">
+        <a id="buttonScholar" class="btn btn-lg btn-success">
+          Become a Scholar
+        </a>
+      </p>
+    </div>
+    <div class="row marketing av_section_anonymous">
+      <div class="col-lg-12">
+        <h2 class="text-center">
+          About you
+        </h2>
+        <p>
+          Would you like to give us some information that would greatly help our research? 
+        </p>
+        <p>
+          Your answers to the questions below will not be used to specifically identify you.
+        </p>
+        <br/>
+        <p>
+          Are you involved in clinical care? (optional)
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="unknown" checked>
+              I prefer not share
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="physician">
+              I am a practicing physician
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="midLevel">
+              I am a mid-level provider (nurse, PA, etc)
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="student1">
+              I am a first year medical student
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="student2">
+              I am a second year medical student
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="student3">
+              I am a third year medical student
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="student4">
+              I am a fourth year medical student
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="fellowship">
+              I am in a residency or fellowship program
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="another">
+              I am another kind of clinician
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="notHealthcare">
+              I am not a healthcare provider at all
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="involved" value="other">
+              I am not a patient or a caregiver
+            </input>
+          </label>
+        </p>
+        <p>
+          Are you recieving clinical care? (optional)
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="care" value="unknown" checked>
+              I prefer not share
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="care" value="patient">
+              I am a patient
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" name="care" value="caregiver">
+              I am a caregiver
+            </input>
+          </label>
+        </p>
+      </div>
+        <p>
+          For your privacy we will reset these back to "I prefer not to share" after you leave this page.
+          We will remember it in our secure data set.
+        </p>
+    </div>
+
+    <div class="row marketing">
+      <div class="col-lg-12">
+        <h2 class="text-center">
+          Browse Settings
+        </h2>
+        <h3>
+          Choose which websites trigger Batea to record your browsing sessions. 
+        </h3>
+        <p>
+          <label>
+            <input type="radio" id="recordAnyWiki" name="record" value="any" checked>
+              Any Wikipedia pages and clinical fact-finding websites
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" id="recordClinicalWiki" name="record" value="clinical">
+              Only clinical Wikipedia pages and clinical fact-finding websites
+            </input>
+          </label>
+        </p>
+        <h3>
+          Pop-up Settings
+        </h3>
+        <p>
+          While you are browsing, Batea may ask you about your online research experience. For example, Batea may ask if you found what you were looking for on Wikipedia. You may disable these pop-ups below. 
+        </p>
+        <p>
+          <label>
+            <input type="radio" id="popupAllow" name="popup" value="allow" checked>
+              Allow pop-ups
+            </input>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input type="radio" id="popupDisable" name="popup" value="disable">
+              Disable pop-ups
+            </input>
+          </label>
+        </p>
+      </div>
+    </div>
+    <div class="row marketing form-group av_section_anonymous subscribe-form">
+      <div class="col-lg-12">
+        <h3 class="text-center">
+          Stay informed
+        </h3>
+        <p>
+          Subscribe to the Batea notices email list (very low traffic).
+        </p>
+        <div class="form-inline">
+          <div class="form-group">
+             <input id="email" type="email" class="form-control">
+          </div>
+          <button id="subscribe" class="btn btn-lg btn-success btn-default">
+            Subscribe
+            <span class="glyphicon glyphicon-refresh spinning" style="display:none;"></span>
+          </button>
+        </div>
+        <p>
+          <br>
+          For your privacy, this email address will be "forgotten" when you leave this page. 
+          We will remember it in our secure data set, but we will not associate it with your browser information.
+          This allows us to contact everyone who is a batea user with important Batea notices, but still allows you to donate data anonymously.
+        </p>
+      </div>
+    </div>
+    <div class="row marketing">
+      <div class="col-lg-12">
+        <h2 class="text-center">
+          Privacy
+        </h2>
+        <p>
+          By installing Batea and choosing to be a Scholar you are consenting
+          to donate identified browsing patterns that are linked 
+          to clinical Wikipedia pages and other clinical-related websites. 
+        </p>
+        <p>
+          Batea will de-identify your browsing data before it is 
+          shared opened to the public. 
+        </p>
+        <p>
+          Batea works by detecting when you visit certain pages (clinical 
+          Wikipedia pages or other clinical websites). This triggers the contribution
+          of the browser history before, and after, the visit to these pages to 
+          the Batea main server. This includes the original search page you visited
+          and the search term that you were using. 
+        </p>
+        <p>
+          Batea is only interested in browsing patterns that are clinical-related.
+          We do not want to gather data about what you browse for entertainment 
+          or for any other personal reasons. 
+        </p>
+        <p>
+          You may uninstall the Batea extension at any time and it will no longer
+          collect any of your browsing data.
+        </p>
+        <br/>
+        <h4 class="text-center">
+          Thank you for your contribution!
+        </h4>
+        <br/>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
